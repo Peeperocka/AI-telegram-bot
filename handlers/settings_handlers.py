@@ -38,7 +38,7 @@ async def choose_mode_handler(callback: types.CallbackQuery, state: FSMContext) 
             parse_mode="Markdown"
         )
         await state.update_data(network="default")
-        await state.set_state(ChatState.waiting_text_query)
+        await state.set_state(ChatState.waiting_query)
     await callback.answer()
 
 
@@ -50,15 +50,18 @@ async def choose_network_single_handler(callback: types.CallbackQuery, state: FS
     user_data = await state.get_data()
     mode = user_data.get("mode")
     network_name = user_data.get("network")
+    if network_name == "gemini":
+        network_name = "Gemini"
+
     await callback.message.delete()
     await callback.message.answer(
-        f"Вы выбрали **обычный режим** и **Нейросеть {network_name}**.\n\n"
+        f"Вы выбрали **обычный режим** и **{network_name}**.\n\n"
         "Теперь вы можете отправлять текстовые и голосовые запросы боту.\n\n"
         "Для вызова настроек используйте команду /settings или кнопку /settings в меню.",
         reply_markup=get_settings_reply_keyboard(),
         parse_mode="Markdown"
     )
-    await state.set_state(ChatState.waiting_text_query)
+    await state.set_state(ChatState.waiting_query)
     await callback.answer()
 
 

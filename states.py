@@ -7,5 +7,4 @@ class SettingsState(StatesGroup):
 
 
 class ChatState(StatesGroup):
-    waiting_text_query = State()
-    waiting_voice_query = State()
+    waiting_query = State()

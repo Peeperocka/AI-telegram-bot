@@ -1,11 +1,9 @@
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
-from aiogram.types import BufferedInputFile
-
-from ai import gemini
-from states import ChatState, SettingsState
-from keyboards.reply_keyboards import get_settings_reply_keyboard
 from io import BytesIO
+from ai import gemini
+from states import ChatState
+from keyboards.reply_keyboards import get_settings_reply_keyboard
 
 router = Router()
 
@@ -18,56 +16,63 @@ async def нейросеть_2_заглушка(query: str) -> str:
     return f"Ответ от Нейросети 2 на запрос: '{query}' (это заглушка)"
 
 
-@router.message(ChatState.waiting_text_query, F.text)
-async def text_query_handler(message: types.Message, state: FSMContext) -> None:
-    user_data = await state.get_data()
-    network = user_data.get("network") or "default"
-
-    query = message.text
-
-    if network == "3":
-        image_data = gemini.text_to_img_request(query)
-        if image_data:
-            photo = BufferedInputFile(image_data.getvalue(), filename="image.png")
-            await message.answer_photo(photo=photo, caption="Сгенерировано Gemini")
-            return
-        else:
-            response = gemini.text_to_text_request(query)
-    else:
-        response = f"Вы в **обычном режиме**. Ответ от **дефолтной нейросети** (заглушка) на запрос: '{query}'"
-
-    await message.answer(response, reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
-
-
-@router.message(ChatState.waiting_voice_query, F.voice)
+@router.message(ChatState.waiting_query, F.voice)
 async def voice_query_handler(message: types.Message, state: FSMContext) -> None:
     user_data = await state.get_data()
     network = user_data.get("network") or "default"
 
     voice = message.voice
 
-    # TODO: реализовать перевод голоса в текст перед отправкой текста в ИИ
-    voice_query = "голосовой запрос"
+    voice_bytes = await message.bot.download(voice)
+    voice_data = BytesIO(voice_bytes.read())
 
-    if network == "1":
-        response = await нейросеть_1_заглушка(voice_query)
+    if network == "gemini":
+        response = gemini.audio_to_text_request(voice_data)
+    elif network == "1":
+        response = await нейросеть_1_заглушка("голосовой запрос")
     elif network == "2":
-        response = await нейросеть_2_заглушка(voice_query)
-    elif network == "3":
-        image_data = gemini.text_to_img_request(voice_query)
-        if image_data:
-            photo = BufferedInputFile(image_data.getvalue(), filename="image.png")
-            await message.answer_photo(photo=photo, caption="Сгенерировано Gemini")
-            return
-        else:
-            response = gemini.text_to_text_request(voice_query)
+        response = await нейросеть_2_заглушка("голосовой запрос")
     else:
         response = f"Вы в **обычном режиме**. Ответ на **голосовой запрос** от **дефолтной нейросети** (заглушка)"
 
     await message.answer(response, reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
 
 
-@router.message(ChatState.waiting_text_query, F.content_types.ANY)
-@router.message(ChatState.waiting_voice_query, F.content_types.ANY)
+@router.message(ChatState.waiting_query, F.photo)
+async def photo_query_handler(message: types.Message, state: FSMContext) -> None:
+    user_data = await state.get_data()
+    network = user_data.get("network") or "default"
+    photo = message.photo[-1]
+    photo_bytes = await message.bot.download(photo)
+    prompt = message.caption or ""
+
+    if network == "gemini":
+        image_bytes = BytesIO(photo_bytes.read())
+        response = gemini.process_image_and_text(image_bytes, prompt)
+    else:
+        response = f"Вы в **обычном режиме**.  Обработка изображений доступна только для **Gemini**"
+
+    await message.answer(response, reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
+
+
+@router.message(ChatState.waiting_query, F.photo)
+async def photo_query_handler(message: types.Message, state: FSMContext) -> None:
+    user_data = await state.get_data()
+    network = user_data.get("network") or "default"
+    photo = message.photo[-1]
+    photo_bytes = await message.bot.download(photo)
+    prompt = message.caption or ""
+
+    if network == "gemini":
+        image_bytes = BytesIO(photo_bytes.read())
+        response = gemini.process_image_and_text(image_bytes, prompt)
+    else:
+        response = f"Вы в **обычном режиме**.  Обработка изображений доступна только для **Gemini**"
+
+    await message.answer(response, reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
+
+
+@router.message(ChatState.waiting_query, F.content_types.ANY)
+@router.message(ChatState.waiting_query, F.content_types.ANY)
 async def unknown_message_in_chat_handler(message: types.Message) -> None:
-    await message.answer("Пожалуйста, отправьте текст или голосовое сообщение для обработки.")
+    await message.answer("Пожалуйста, отправьте текст, изображение или голосовое сообщение для обработки.")
