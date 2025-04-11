@@ -1,11 +1,9 @@
+import handlers.settings_handlers as settings
+import handlers.chat_handlers as chat
 import asyncio
 import os
 
 from dotenv import load_dotenv
-
-import handlers.settings_handlers as settings
-import handlers.chat_handlers as chat
-
 from aiogram import Bot, Dispatcher
 
 

@@ -1,9 +1,13 @@
+import io
+
+from PIL import Image
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 from io import BytesIO
-from ai import gemini
+from ai import gemini, flux
 from states import ChatState
 from keyboards.reply_keyboards import get_settings_reply_keyboard
+from aiogram.types import BufferedInputFile
 
 router = Router()
 
@@ -18,6 +22,7 @@ async def нейросеть_2_заглушка(query: str) -> str:
 
 @router.message(ChatState.waiting_query, F.voice)
 async def voice_query_handler(message: types.Message, state: FSMContext) -> None:
+    await message.answer("⏳")
     user_data = await state.get_data()
     network = user_data.get("network") or "default"
 
@@ -32,6 +37,8 @@ async def voice_query_handler(message: types.Message, state: FSMContext) -> None
         response = await нейросеть_1_заглушка("голосовой запрос")
     elif network == "2":
         response = await нейросеть_2_заглушка("голосовой запрос")
+    elif network == "flux":
+        response = "Голосовые запросы для FLUX не поддерживаются."
     else:
         response = f"Вы в **обычном режиме**. Ответ на **голосовой запрос** от **дефолтной нейросети** (заглушка)"
 
@@ -40,6 +47,7 @@ async def voice_query_handler(message: types.Message, state: FSMContext) -> None
 
 @router.message(ChatState.waiting_query, F.photo)
 async def photo_query_handler(message: types.Message, state: FSMContext) -> None:
+    await message.answer("⏳")
     user_data = await state.get_data()
     network = user_data.get("network") or "default"
     photo = message.photo[-1]
@@ -55,24 +63,37 @@ async def photo_query_handler(message: types.Message, state: FSMContext) -> None
     await message.answer(response, reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
 
 
-@router.message(ChatState.waiting_query, F.photo)
-async def photo_query_handler(message: types.Message, state: FSMContext) -> None:
+@router.message(ChatState.waiting_query, F.text)
+async def text_query_handler(message: types.Message, state: FSMContext) -> None:
+    await message.answer("⏳")
     user_data = await state.get_data()
     network = user_data.get("network") or "default"
-    photo = message.photo[-1]
-    photo_bytes = await message.bot.download(photo)
-    prompt = message.caption or ""
+    query = message.text
 
     if network == "gemini":
-        image_bytes = BytesIO(photo_bytes.read())
-        response = gemini.process_image_and_text(image_bytes, prompt)
+        response = gemini.text_to_img_request(query)
+    elif network == "1":
+        response = await нейросеть_1_заглушка(query)
+    elif network == "2":
+        response = await нейросеть_2_заглушка(query)
+    elif network == "flux":
+        try:
+            image: Image.Image = flux.generate_flux(query)
+            bio = io.BytesIO()
+            image.save(bio, 'PNG')
+            bio.seek(0)
+            photo = BufferedInputFile(bio.read(), filename="image.png")
+            await message.answer_photo(photo, reply_markup=get_settings_reply_keyboard())
+            return
+        except Exception as e:
+            await message.answer(f"Произошла ошибка при генерации изображения: {e}")
+            return
     else:
-        response = f"Вы в **обычном режиме**.  Обработка изображений доступна только для **Gemini**"
+        response = f"Вы в **обычном режиме**. Ответ от **дефолтной нейросети** (заглушка) на запрос: '{query}'"
 
     await message.answer(response, reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
 
 
-@router.message(ChatState.waiting_query, F.content_types.ANY)
 @router.message(ChatState.waiting_query, F.content_types.ANY)
 async def unknown_message_in_chat_handler(message: types.Message) -> None:
     await message.answer("Пожалуйста, отправьте текст, изображение или голосовое сообщение для обработки.")
