@@ -28,7 +28,7 @@ def generate_schnell(user_message: str) -> Image.Image:
     )
     try:
         result = client.predict(
-            prompt="Hello!!",
+            prompt=user_message,
             seed=0,
             randomize_seed=True,
             width=1024,
