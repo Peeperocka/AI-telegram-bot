@@ -14,7 +14,7 @@ def get_mode_keyboard() -> InlineKeyboardMarkup:
 def get_networks_single_keyboard() -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Нейросеть 1", callback_data="network_1")],
-        [InlineKeyboardButton(text="Нейросеть 2", callback_data="network_2")],
+        [InlineKeyboardButton(text="Llama", callback_data="network_llama")],
         [InlineKeyboardButton(text="Gemini (Text & Image)", callback_data="network_gemini")],
         [InlineKeyboardButton(text="FLUX (Image Generation)", callback_data="network_flux")],
         [InlineKeyboardButton(text="Назад к выбору режима", callback_data="back_to_mode")],

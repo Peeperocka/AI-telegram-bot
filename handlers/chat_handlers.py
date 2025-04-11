@@ -6,7 +6,7 @@ from PIL import Image
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 from io import BytesIO
-from ai import gemini, flux, whisper
+from ai import gemini, flux, whisper, llama
 from states import ChatState
 from keyboards.reply_keyboards import get_settings_reply_keyboard
 from aiogram.types import BufferedInputFile
@@ -48,8 +48,8 @@ async def voice_query_handler(message: types.Message, state: FSMContext) -> None
             response = gemini.text_to_img_request(transcription)
         elif network == "1":
             response = await нейросеть_1_заглушка(transcription)
-        elif network == "2":
-            response = await нейросеть_2_заглушка(transcription)
+        elif network == "llama":
+            response = llama.text_request(transcription)
         elif network == "flux":
             try:
                 image: Image.Image = flux.generate_schnell(transcription)
@@ -102,8 +102,8 @@ async def text_query_handler(message: types.Message, state: FSMContext) -> None:
         response = gemini.text_to_img_request(query)
     elif network == "1":
         response = await нейросеть_1_заглушка(query)
-    elif network == "2":
-        response = await нейросеть_2_заглушка(query)
+    elif network == "llama":
+        response = llama.text_request(query)
     elif network == "flux":
         try:
             image: Image.Image = flux.generate_schnell(query)
