@@ -78,7 +78,7 @@ async def text_query_handler(message: types.Message, state: FSMContext) -> None:
         response = await нейросеть_2_заглушка(query)
     elif network == "flux":
         try:
-            image: Image.Image = flux.generate_flux(query)
+            image: Image.Image = flux.generate_schnell(query)
             bio = io.BytesIO()
             image.save(bio, 'PNG')
             bio.seek(0)
