@@ -1,10 +1,12 @@
 import io
+import os
+import tempfile
 
 from PIL import Image
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 from io import BytesIO
-from ai import gemini, flux
+from ai import gemini, flux, whisper
 from states import ChatState
 from keyboards.reply_keyboards import get_settings_reply_keyboard
 from aiogram.types import BufferedInputFile
@@ -31,18 +33,44 @@ async def voice_query_handler(message: types.Message, state: FSMContext) -> None
     voice_bytes = await message.bot.download(voice)
     voice_data = BytesIO(voice_bytes.read())
 
-    if network == "gemini":
-        response = gemini.audio_to_text_request(voice_data)
-    elif network == "1":
-        response = await нейросеть_1_заглушка("голосовой запрос")
-    elif network == "2":
-        response = await нейросеть_2_заглушка("голосовой запрос")
-    elif network == "flux":
-        response = "Голосовые запросы для FLUX не поддерживаются."
-    else:
-        response = f"Вы в **обычном режиме**. Ответ на **голосовой запрос** от **дефолтной нейросети** (заглушка)"
+    with tempfile.NamedTemporaryFile(suffix=".ogg", delete=False) as temp_audio:
+        temp_audio.write(voice_data.read())
+        audio_path = temp_audio.name
 
-    await message.answer(response, reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
+    try:
+        transcription = whisper.transcribe_audio(audio_path)
+
+        if "Error during transcription" in transcription:
+            await message.answer(transcription, reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
+            return
+
+        if network == "gemini":
+            response = gemini.text_to_img_request(transcription)
+        elif network == "1":
+            response = await нейросеть_1_заглушка(transcription)
+        elif network == "2":
+            response = await нейросеть_2_заглушка(transcription)
+        elif network == "flux":
+            try:
+                image: Image.Image = flux.generate_schnell(transcription)
+                bio = io.BytesIO()
+                image.save(bio, 'PNG')
+                bio.seek(0)
+                photo = BufferedInputFile(bio.read(), filename="image.png")
+                await message.answer_photo(photo, reply_markup=get_settings_reply_keyboard())
+                return
+            except Exception as e:
+                response = f"Произошла ошибка при генерации изображения: {e}"
+        else:
+            response = f"Вы в **обычном режиме**. Ответ от **дефолтной нейросети** (заглушка) на запрос: '{transcription}'"
+
+        if response is None:
+            response = "Произошла непредвиденная ошибка. Ответ от нейросети не получен."
+
+        await message.answer(response, reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
+
+    finally:
+        os.remove(audio_path)
 
 
 @router.message(ChatState.waiting_query, F.photo)
