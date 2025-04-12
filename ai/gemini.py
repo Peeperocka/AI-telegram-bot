@@ -27,7 +27,7 @@ class GeminiBaseModel(BaseAIModel):
     async def execute(self, input_data: Union[str, BytesIO], prompt: str = None) -> Union[str, BytesIO, None]:
         if isinstance(input_data, str):
             if TextToImgModel in self.meta.capabilities:
-                return await self._generate_content(prompt=input_data, modalities=['Image'])
+                return await self._generate_content(prompt=input_data, modalities=['Image', 'Text'])
             return await self._generate_text(prompt=input_data)
 
         if isinstance(input_data, BytesIO):
@@ -119,7 +119,7 @@ class GeminiFlash(GeminiBaseModel):
 class GeminiPro(GeminiBaseModel):
     def __init__(self):
         super().__init__(
-            model_version="gemini-1.5",
+            model_version="gemini-1.5-pro",
             description="Продвинутая модель gemini, способная к более точному анализу",
             capabilities=[TextToTextModel]
         )
