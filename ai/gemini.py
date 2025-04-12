@@ -125,3 +125,33 @@ class GeminiPro(GeminiBaseModel):
             description="Продвинутая модель gemini, способная к более точному анализу",
             capabilities=[TextToTextModel]
         )
+
+
+@register_model(TextToTextModel, ImgToTextModel, AudioToTextModel)
+class GeminiFlashLite(GeminiBaseModel):
+    def __init__(self):
+        super().__init__(
+            model_version="gemini-2.0-flash-lite",
+            description="Облегченная и быстрая модель Gemini, оптимизированная для скорости и эффективности.",
+            capabilities=[TextToTextModel]
+        )
+
+
+@register_model(TextToTextModel, ImgToTextModel, AudioToTextModel)
+class GeminiFlashOld(GeminiBaseModel):
+    def __init__(self):
+        super().__init__(
+            model_version="gemini-1.5-flash",
+            description="Более ранняя версия Gemini Flash, с балансом скорости и возможностей.",
+            capabilities=[TextToTextModel]
+        )
+
+
+@register_model(TextToTextModel, ImgToTextModel, AudioToTextModel)
+class GeminiFlashOldLite(GeminiBaseModel):
+    def __init__(self):
+        super().__init__(
+            model_version="gemini-1.5-flash-8b",
+            description="Самая легкая и старая Gemini Flash для задач с ограниченными ресурсами.",
+            capabilities=[TextToTextModel]
+        )
