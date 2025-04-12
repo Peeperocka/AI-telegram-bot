@@ -2,124 +2,197 @@ import io
 import os
 import tempfile
 
+import aiogram.exceptions
 from PIL import Image
 from aiogram import Router, types, F
+from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from io import BytesIO
-from ai import gemini, flux, whisper, llama
 from states import ChatState
 from keyboards.reply_keyboards import get_settings_reply_keyboard
 from aiogram.types import BufferedInputFile
+from registry import AIRegistry, TextToTextModel, TextToImgModel, ImgToTextModel
+from utils.utils import split_text
 
 router = Router()
 
 
-async def нейросеть_1_заглушка(query: str) -> str:
-    return f"Ответ от Нейросети 1 на запрос: '{query}' (это заглушка)"
+async def _handle_model_response(message: types.Message, response):
+    if isinstance(response, BytesIO):
+        try:
+            response.seek(0)
+            with Image.open(response) as img:
+                bio = io.BytesIO()
+                img.save(bio, 'PNG')
+                bio.seek(0)
+                await message.answer_photo(
+                    BufferedInputFile(bio.read(), filename="image.png"),
+                    reply_markup=get_settings_reply_keyboard()
+                )
+        except Exception as e:
+            await message.answer(
+                f"❌ Ошибка обработки изображения: {e}",
+                reply_markup=get_settings_reply_keyboard()
+            )
+    elif isinstance(response, str):
+        message_parts = split_text(response)
+        for i, part in enumerate(message_parts):
+            reply_markup = get_settings_reply_keyboard() if i == 0 else None
+            try:
+                await message.answer(
+                    text=part,
+                    reply_markup=reply_markup,
+                    parse_mode=ParseMode.MARKDOWN,
+                    disable_web_page_preview=True
+                )
+            except aiogram.exceptions.TelegramAPIError as e:
+                print(e)
+                error_msg = f"⚠️ Ошибка отправки сообщения"
+                try:
+                    await message.answer(
+                        text=part.replace("*", ""),
+                        reply_markup=reply_markup
+                    )
+                except aiogram.exceptions.TelegramAPIError as e:
+                    print(e)
+                    if i == 0:
+                        await message.answer(error_msg, reply_markup=get_settings_reply_keyboard())
+                    else:
+                        await message.answer(error_msg)
+                    break
 
+    elif response is None:
+        await message.answer(
+            "🚫 Не удалось получить ответ от модели",
+            reply_markup=get_settings_reply_keyboard()
+        )
 
-async def нейросеть_2_заглушка(query: str) -> str:
-    return f"Ответ от Нейросети 2 на запрос: '{query}' (это заглушка)"
+    else:
+        await message.answer(
+            "⚠️ Неподдерживаемый формат ответа",
+            reply_markup=get_settings_reply_keyboard()
+        )
 
 
 @router.message(ChatState.waiting_query, F.voice)
 async def voice_query_handler(message: types.Message, state: FSMContext) -> None:
     await message.answer("⏳")
     user_data = await state.get_data()
-    network = user_data.get("network") or "default"
-
-    voice = message.voice
-
-    voice_bytes = await message.bot.download(voice)
-    voice_data = BytesIO(voice_bytes.read())
-
-    with tempfile.NamedTemporaryFile(suffix=".ogg", delete=False) as temp_audio:
-        temp_audio.write(voice_data.read())
-        audio_path = temp_audio.name
+    model_id = user_data.get("model_id", "default")
+    registry = AIRegistry()
 
     try:
-        transcription = whisper.transcribe_audio(audio_path)
+        voice = message.voice
+        voice_bytes = await message.bot.download(voice)
 
-        if "Error during transcription" in transcription:
-            await message.answer(transcription, reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
-            return
+        with tempfile.NamedTemporaryFile(suffix=".ogg", delete=False) as temp_audio:
+            temp_audio.write(voice_bytes.read())
+            audio_path = temp_audio.name
 
-        if network == "gemini":
-            response = gemini.text_to_img_request(transcription)
-        elif network == "1":
-            response = await нейросеть_1_заглушка(transcription)
-        elif network == "llama":
-            response = llama.text_request(transcription)
-        elif network == "flux":
-            try:
-                image: Image.Image = flux.generate_schnell(transcription)
-                bio = io.BytesIO()
-                image.save(bio, 'PNG')
-                bio.seek(0)
-                photo = BufferedInputFile(bio.read(), filename="image.png")
-                await message.answer_photo(photo, reply_markup=get_settings_reply_keyboard())
+        try:
+            whisper_model = registry.get_model("whisper", "whisper-large-v3")
+            if not whisper_model:
+                await message.answer("⚠️ Ошибка транскрипции: модель не найдена")
                 return
-            except Exception as e:
-                response = f"Произошла ошибка при генерации изображения: {e}"
-        else:
-            response = f"Вы в **обычном режиме**. Ответ от **дефолтной нейросети** (заглушка) на запрос: '{transcription}'"
 
-        if response is None:
-            response = "Произошла непредвиденная ошибка. Ответ от нейросети не получен."
+            transcription = await whisper_model.execute(audio_path)
 
-        await message.answer(response, reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
+            if model_id == "default":
+                await message.answer("Режим по умолчанию не настроен")
+                return
 
-    finally:
-        os.remove(audio_path)
+            provider, version = model_id.split(":")
+            model = registry.get_model(provider, version)
+
+            if not model:
+                await message.answer(f"❓️ Модель {model_id} не найдена")
+                return
+
+            if TextToTextModel in model.meta.capabilities:
+                response = await model.execute(transcription)
+            elif TextToImgModel in model.meta.capabilities:
+                response = await model.execute(transcription)
+            else:
+                response = f"🚫 Модель {model_id} не поддерживает текстовые запросы"
+
+            await _handle_model_response(message, response)
+
+        finally:
+            os.remove(audio_path)
+
+    except Exception as e:
+        print(e)
+        await message.answer(
+            "🚫 Не удалось получить ответ от модели",
+            reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
 
 
 @router.message(ChatState.waiting_query, F.photo)
 async def photo_query_handler(message: types.Message, state: FSMContext) -> None:
     await message.answer("⏳")
     user_data = await state.get_data()
-    network = user_data.get("network") or "default"
-    photo = message.photo[-1]
-    photo_bytes = await message.bot.download(photo)
-    prompt = message.caption or ""
+    model_id = user_data.get("model_id", "default")
+    registry = AIRegistry()
 
-    if network == "gemini":
-        image_bytes = BytesIO(photo_bytes.read())
-        response = gemini.process_image_and_text(image_bytes, prompt)
-    else:
-        response = f"Вы в **обычном режиме**.  Обработка изображений доступна только для **Gemini**"
+    try:
+        photo = message.photo[-1]
+        photo_bytes = await message.bot.download(photo)
+        image_data = BytesIO(photo_bytes.read())
+        prompt = message.caption or ""
 
-    await message.answer(response, reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
+        if model_id == "default":
+            await message.answer("Режим по умолчанию не поддерживает изображения")
+            return
+
+        provider, version = model_id.split(":")
+        model = registry.get_model(provider, version)
+
+        if not model:
+            await message.answer(f"❓️ Модель {model_id} не найдена")
+            return
+
+        if ImgToTextModel in model.meta.capabilities:
+            response = await model.execute(image_data, prompt)
+        else:
+            response = f"🚫 Модель {model_id} не поддерживает обработку изображений"
+
+        await _handle_model_response(message, response)
+
+    except Exception as e:
+        await message.answer(f"Ошибка: {str(e)}", reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
 
 
 @router.message(ChatState.waiting_query, F.text)
 async def text_query_handler(message: types.Message, state: FSMContext) -> None:
     await message.answer("⏳")
     user_data = await state.get_data()
-    network = user_data.get("network") or "default"
-    query = message.text
+    model_id = user_data.get("model_id", "default")
+    registry = AIRegistry()
 
-    if network == "gemini":
-        response = gemini.text_to_img_request(query)
-    elif network == "1":
-        response = await нейросеть_1_заглушка(query)
-    elif network == "llama":
-        response = llama.text_request(query)
-    elif network == "flux":
-        try:
-            image: Image.Image = flux.generate_schnell(query)
-            bio = io.BytesIO()
-            image.save(bio, 'PNG')
-            bio.seek(0)
-            photo = BufferedInputFile(bio.read(), filename="image.png")
-            await message.answer_photo(photo, reply_markup=get_settings_reply_keyboard())
+    try:
+        if model_id == "default":
+            await message.answer("Режим по умолчанию не активирован")
             return
-        except Exception as e:
-            await message.answer(f"Произошла ошибка при генерации изображения: {e}")
-            return
-    else:
-        response = f"Вы в **обычном режиме**. Ответ от **дефолтной нейросети** (заглушка) на запрос: '{query}'"
 
-    await message.answer(response, reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
+        provider, version = model_id.split(":")
+        model = registry.get_model(provider, version)
+
+        if not model:
+            await message.answer(f"Модель {model_id} не найдена")
+            return
+
+        if TextToTextModel in model.meta.capabilities or TextToImgModel in model.meta.capabilities:
+            response = await model.execute(message.text)
+            await _handle_model_response(message, response)
+        else:
+            await message.answer(
+                f"🚫 Модель {model_id} не поддерживает текстовые запросы",
+                reply_markup=get_settings_reply_keyboard()
+            )
+
+    except ValueError as e:
+        print(e)
+        await message.answer("🚫 Не удалось получить ответ от модели", reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
 
 
 @router.message(ChatState.waiting_query, F.content_types.ANY)

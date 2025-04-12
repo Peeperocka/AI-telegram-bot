@@ -1,7 +1,7 @@
 from aiogram import Router, types, F
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
-from keyboards.inline_keyboards import get_mode_keyboard, get_networks_single_keyboard
+from keyboards.inline_keyboards import get_mode_keyboard, get_models_keyboard, get_providers_keyboard
 from keyboards.reply_keyboards import get_settings_reply_keyboard
 from states import SettingsState, ChatState
 
@@ -18,54 +18,94 @@ async def command_start_handler(message: types.Message, state: FSMContext) -> No
     await state.set_state(SettingsState.choosing_mode)
 
 
-@router.callback_query(SettingsState.choosing_mode, lambda c: c.data.startswith("mode_"))
+@router.callback_query(SettingsState.choosing_mode, F.data.startswith("mode_"))
 async def choose_mode_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
     mode = callback.data.split("_")[1]
     await state.update_data(mode=mode)
 
     if mode == "single":
         await callback.message.edit_text(
-            "Вы выбрали **обычный режим**. Теперь выберите нейросеть:",
-            reply_markup=get_networks_single_keyboard(),
-            parse_mode="Markdown"
+            "Вы выбрали обычный режим. Выберите провайдера:",
+            reply_markup=get_providers_keyboard()
         )
-        await state.set_state(SettingsState.choosing_network_single)
+        await state.set_state(SettingsState.choosing_provider)
     elif mode == "arena":
         await callback.message.edit_text(
-            "**Арена режим** пока находится в разработке.\n\n"
-            "Вы будете получать ответы от нескольких нейросетей и выбирать лучший (функционал будет добавлен позже).\n\n"
-            "Сейчас бот переключен в **обычный режим**.",
-            parse_mode="Markdown"
+            "Арена режим в разработке. Используйте обычный режим.",
+            reply_markup=get_mode_keyboard()
         )
-        await state.update_data(network="default")
-        await state.set_state(ChatState.waiting_query)
     await callback.answer()
 
 
-@router.callback_query(SettingsState.choosing_network_single, lambda c: c.data.startswith("network_"))
-async def choose_network_single_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
-    network = callback.data.split("_")[1]
-    await state.update_data(network=network)
+@router.callback_query(SettingsState.choosing_provider, F.data.startswith("provider_"))
+async def choose_provider_handler(callback: types.CallbackQuery, state: FSMContext):
+    provider = callback.data.split("_")[1]
+    await state.update_data(current_provider=provider)
 
-    user_data = await state.get_data()
-    mode = user_data.get("mode")
-    network_name = user_data.get("network")
-    if network_name == "gemini":
-        network_name = "Gemini"
+    await callback.message.edit_text(
+        f"Выберите версию {provider}:",
+        reply_markup=get_models_keyboard(provider)
+    )
+    await state.set_state(SettingsState.choosing_model)
+    await callback.answer()
+
+
+@router.callback_query(SettingsState.choosing_model, F.data.startswith("model_"))
+async def choose_model_handler(callback: types.CallbackQuery, state: FSMContext):
+    _, provider, version = callback.data.split("_")
+
+    await state.update_data(
+        model_id=f"{provider}:{version}",
+        model_name=f"{provider} {version}"
+    )
 
     await callback.message.delete()
     await callback.message.answer(
-        f"Вы выбрали **обычный режим** и **{network_name}**.\n\n"
-        "Теперь вы можете отправлять текстовые и голосовые запросы боту.\n\n"
-        "Для вызова настроек используйте команду /settings или кнопку /settings в меню.",
-        reply_markup=get_settings_reply_keyboard(),
-        parse_mode="Markdown"
+        f"✅ Выбрана модель: {provider} {version}\n"
+        "Теперь можете отправлять запросы!",
+        reply_markup=get_settings_reply_keyboard()
     )
     await state.set_state(ChatState.waiting_query)
     await callback.answer()
 
 
-@router.callback_query(SettingsState.choosing_network_single, lambda c: c.data == "back_to_mode")
+@router.callback_query(SettingsState.choosing_model, F.data == "back_to_providers")
+async def back_to_providers_handler(callback: types.CallbackQuery, state: FSMContext):
+    await callback.message.edit_text(
+        "Выберите провайдера:",
+        reply_markup=get_providers_keyboard()
+    )
+    await state.set_state(SettingsState.choosing_provider)
+    await callback.answer()
+
+
+@router.callback_query(SettingsState.choosing_provider, F.data == "back_to_mode")
+async def back_to_mode_handler(callback: types.CallbackQuery, state: FSMContext):
+    await callback.message.edit_text(
+        "Выберите режим работы бота:",
+        reply_markup=get_mode_keyboard()
+    )
+    await state.set_state(SettingsState.choosing_mode)
+    await callback.answer()
+
+
+@router.callback_query(SettingsState.choosing_provider, F.data.startswith("model_"))
+async def choose_model_handler(callback: types.CallbackQuery, state: FSMContext):
+    _, provider, version = callback.data.split("_")
+    await state.update_data(
+        model_id=f"{provider}:{version}",
+        model_name=f"{provider} {version}"
+    )
+    await callback.message.delete()
+    await callback.message.answer(
+        f"Выбрана модель: {provider} {version}",
+        reply_markup=get_settings_reply_keyboard()
+    )
+    await state.set_state(ChatState.waiting_query)
+    await callback.answer()
+
+
+@router.callback_query(SettingsState.choosing_model, lambda c: c.data == "back_to_mode")
 async def back_to_mode_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
     await callback.message.edit_text(
         "Выберите режим работы бота:",

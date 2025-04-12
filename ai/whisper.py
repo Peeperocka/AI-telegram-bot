@@ -1,19 +1,24 @@
 from gradio_client import Client, handle_file
+from registry import AudioToTextModel, register_model, ModelInfo
 
 
-def transcribe_audio(audio_path: str) -> str:
-    client = Client("hf-audio/whisper-large-v3")
-    try:
-        result = client.predict(
+@register_model(AudioToTextModel)
+class WhisperModel:
+    def __init__(self):
+        self.meta = ModelInfo(
+            provider="whisper",
+            version="whisper-large-v3",
+            description="Audio transcription model",
+            capabilities=[AudioToTextModel],
+            is_async=False,
+            is_available_to_user=False
+        )
+        self.client = Client("hf-audio/whisper-large-v3")
+
+    async def execute(self, audio_path: str) -> str:
+        result = self.client.predict(
             inputs=handle_file(audio_path),
             task="transcribe",
             api_name="/predict_1"
         )
         return result
-    except Exception as e:
-        print(f"Error during Whisper transcription: {e}")
-        return f"Ошибка во время транскрипции, пожалуйста, попробуйте еще раз чуть позже"
-
-
-if __name__ == '__main__':
-    transcribe_audio("C:/Users/User/Music/audio_2025-04-11_03-46-30.ogg")

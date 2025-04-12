@@ -9,6 +9,10 @@ from aiogram import Bot, Dispatcher
 
 async def main():
     load_dotenv()
+    # Импорт всех моделей и де-факто инициализация регистра.
+    from ai import gemini, flux, llama, whisper
+    from registry import AIRegistry
+
     bot_apikey = os.environ["TELEGRAM_BOT_APIKEY"]
     bot = Bot(token=bot_apikey)
     dp = Dispatcher()

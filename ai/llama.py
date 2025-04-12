@@ -1,33 +1,47 @@
-from dotenv import load_dotenv
 from groq import Groq
 import os
+from registry import TextToTextModel, register_model, ModelInfo, BaseAIModel
 
-load_dotenv()
+
+class LlamaBaseModel(BaseAIModel):
+    provider = "Llama"
+    client = None
+
+    def __init__(self, model_version: str, description: str):
+        if not LlamaBaseModel.client:
+            LlamaBaseModel.client = Groq(api_key=os.environ["GROQ_APIKEY"])
+
+        self.meta = ModelInfo(
+            provider=self.provider,
+            version=model_version,
+            description=description,
+            capabilities=[TextToTextModel],
+            is_async=False
+        )
+
+    async def execute(self, prompt: str) -> str:
+        completion = self.client.chat.completions.create(
+            model=self.meta.version,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=1,
+            max_tokens=1024
+        )
+        return completion.choices[0].message.content
 
 
-def text_request(user_message: str) -> str:
-    GROQ_APIKEY = os.environ["GROQ_APIKEY"]
-    client = Groq(
-        api_key=GROQ_APIKEY,
-    )
+@register_model(TextToTextModel)
+class Llama3_8B(LlamaBaseModel):
+    def __init__(self):
+        super().__init__(
+            model_version="llama-3.1-8b-instant",
+            description="Fast 8B parameter model"
+        )
 
-    completion = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[
-            {
-                "role": "system",
-                "content": "you are a helpful assistant."
-            },
-            {
-                "role": "user",
-                "content": user_message,
-            }
-        ],
-        temperature=1,
-        max_tokens=1024,
-        top_p=1,
-        stream=False,
-        stop=None,
-    )
 
-    return completion.choices[0].message.content
+@register_model(TextToTextModel)
+class Llama3_70B(LlamaBaseModel):
+    def __init__(self):
+        super().__init__(
+            model_version="llama-3.1-70b-instant",
+            description="Powerful 70B parameter model"
+        )

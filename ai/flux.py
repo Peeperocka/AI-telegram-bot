@@ -3,44 +3,46 @@ from gradio_client import Client
 import io
 import requests
 from PIL import Image
+from registry import TextToImgModel, ModelInfo, register_model
 
 
-def generate_schnell_backup(user_message: str) -> Image.Image:
-    """Работает медленнее, но куда более отказоустойчивая"""
-    client = Client(
-        "lalashechka/FLUX_1",
-        download_files=False
-    )
-    result = client.predict(
-        prompt=user_message,
-    )
-    image_url = result['url']
-    response = requests.get(image_url, stream=True)
-    response.raise_for_status()
-    image = Image.open(io.BytesIO(response.content))
-    return image
-
-
-def generate_schnell(user_message: str) -> Image.Image:
-    client = Client(
-        "black-forest-labs/FLUX.1-schnell",
-        download_files=False
-    )
-    try:
-        result = client.predict(
-            prompt=user_message,
-            seed=0,
-            randomize_seed=True,
-            width=1024,
-            height=1024,
-            num_inference_steps=4,
-            api_name="/infer"
+@register_model(TextToImgModel)
+class FluxModel(TextToImgModel):
+    def __init__(self):
+        self.meta = ModelInfo(
+            provider="flux",
+            version="FLUX.1-schnell",
+            description="Image generation model",
+            capabilities=[TextToImgModel],
+            is_async=False
         )
-        image_url = result[0]['url']
+
+    async def execute(self, prompt: str) -> Image.Image:
+        try:
+            client = Client(
+                "black-forest-labs/FLUX.1-schnell",
+                download_files=False
+            )
+            result = client.predict(
+                prompt=prompt,
+                seed=0,
+                randomize_seed=True,
+                width=1024,
+                height=1024,
+                num_inference_steps=4,
+                api_name="/infer"
+            )
+            return self._process_result(result[0]['url'])
+        except gradio_client.exceptions.AppError:
+            return await self._use_backup(prompt)
+
+    @staticmethod
+    def _process_result(image_url):
         response = requests.get(image_url, stream=True)
         response.raise_for_status()
-        image = Image.open(io.BytesIO(response.content))
-        return image
-    except gradio_client.exceptions.AppError as e:
-        print(e)
-        return generate_schnell_backup(user_message)
+        return Image.open(io.BytesIO(response.content))
+
+    async def _use_backup(self, prompt):
+        client = Client("lalashechka/FLUX_1", download_files=False)
+        result = client.predict(prompt=prompt)
+        return self._process_result(result['url'])

@@ -5,10 +5,19 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1d043470-6dd6-4858-98bb-f5825fe75566" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/ai/whisper.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/registry.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/utils/utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ai/flux.py" beforeDir="false" afterPath="$PROJECT_DIR$/ai/flux.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ai/gemini.py" beforeDir="false" afterPath="$PROJECT_DIR$/ai/gemini.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ai/llama.py" beforeDir="false" afterPath="$PROJECT_DIR$/ai/llama.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ai/whisper.py" beforeDir="false" afterPath="$PROJECT_DIR$/ai/whisper.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bot.py" beforeDir="false" afterPath="$PROJECT_DIR$/bot.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/handlers/chat_handlers.py" beforeDir="false" afterPath="$PROJECT_DIR$/handlers/chat_handlers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/handlers/settings_handlers.py" beforeDir="false" afterPath="$PROJECT_DIR$/handlers/settings_handlers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/keyboards/inline_keyboards.py" beforeDir="false" afterPath="$PROJECT_DIR$/keyboards/inline_keyboards.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/keyboards/reply_keyboards.py" beforeDir="false" afterPath="$PROJECT_DIR$/keyboards/reply_keyboards.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/states.py" beforeDir="false" afterPath="$PROJECT_DIR$/states.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -45,21 +54,25 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.bot.executor": "Run",
-    "Python.chat_gpt.executor": "Run",
-    "Python.flux.executor": "Run",
-    "Python.gemini.executor": "Run",
-    "Python.settings_handlers.executor": "Run",
-    "Python.whisper.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "com.codeium.enabled": "true",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "C:/Users/User/Desktop/PyCharm Projects/trash/gettin apikey",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.bot.executor&quot;: &quot;Run&quot;,
+    &quot;Python.chat_gpt.executor&quot;: &quot;Run&quot;,
+    &quot;Python.chat_handlers.executor&quot;: &quot;Run&quot;,
+    &quot;Python.flux.executor&quot;: &quot;Run&quot;,
+    &quot;Python.gemini.executor&quot;: &quot;Run&quot;,
+    &quot;Python.llama.executor&quot;: &quot;Run&quot;,
+    &quot;Python.settings_handlers.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.text.executor&quot;: &quot;Run&quot;,
+    &quot;Python.whisper.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;com.codeium.enabled&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/User/Desktop/PyCharm Projects/trash/gettin apikey&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration name="bot" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Telebot" />

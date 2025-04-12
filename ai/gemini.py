@@ -1,85 +1,125 @@
 import os
 from io import BytesIO
-
+from typing import Union
 from google.genai import types
-from dotenv import load_dotenv
 from google import genai
+from registry import (TextToTextModel, TextToImgModel,
+                      ImgToTextModel, AudioToTextModel,
+                      register_model, ModelInfo, BaseAIModel)
 
 
-def text_to_img_request(prompt: str) -> BytesIO | None:
-    gemini_apikey = os.environ["GEMINI_APIKEY"]
-    client = genai.Client(api_key=gemini_apikey)
+class GeminiBaseModel(BaseAIModel):
+    provider = "Gemini"
+    client = None
 
-    try:
-        response = client.models.generate_content(
-            model="gemini-2.0-flash-exp-image-generation",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_modalities=['Text', 'Image']
+    def __init__(self, model_version: str, description: str, capabilities: list):
+        if not GeminiBaseModel.client:
+            GeminiBaseModel.client = genai.Client(api_key=os.environ["GEMINI_APIKEY"])
+
+        self.meta = ModelInfo(
+            provider=self.provider,
+            version=model_version,
+            description=description,
+            capabilities=capabilities,
+            is_async=False
+        )
+
+    async def execute(self, input_data: Union[str, BytesIO], prompt: str = None) -> Union[str, BytesIO, None]:
+        if isinstance(input_data, str):
+            if TextToImgModel in self.meta.capabilities:
+                return await self._generate_content(prompt=input_data, modalities=['Image'])
+            return await self._generate_text(prompt=input_data)
+
+        if isinstance(input_data, BytesIO):
+            if prompt and ImgToTextModel in self.meta.capabilities:
+                return await self._process_image_with_prompt(image=input_data, prompt=prompt)
+            if AudioToTextModel in self.meta.capabilities:
+                return await self._process_audio(audio=input_data)
+        return None
+
+    async def _generate_text(self, prompt: str) -> str:
+        response = self.client.models.generate_content(
+            model=self.meta.version,
+            contents=prompt
+        )
+        return response.text
+
+    async def _generate_content(self, prompt: str, modalities: list) -> Union[BytesIO, str, None]:
+        try:
+            response = self.client.models.generate_content(
+                model=self.meta.version,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    max_output_tokens=4096,
+                    response_modalities=modalities
+                )
             )
-        )
 
-        for part in response.candidates[0].content.parts:
-            if part.inline_data is not None:
-                return BytesIO(part.inline_data.data)
-        return None
-    except Exception as e:
-        print(f"Error generating image: {e}")
-        return None
+            if not response.candidates:
+                return None
 
+            content = response.candidates[0].content
+            return self._parse_response(content)
 
-def text_to_text_request(prompt: str) -> str:
-    gemini_apikey = os.environ["GEMINI_APIKEY"]
-    client = genai.Client(api_key=gemini_apikey)
+        except Exception as e:
+            print(f"Error in content generation: {str(e)}")
+            return None
 
-    try:
-        response = client.models.generate_content(
-            model="gemini-2.0-flash", contents=prompt
-        )
-        return response.text
-    except Exception as e:
-        print(f"Error generating text: {e}")
-        return f"Error: Could not generate text (Gemini).  Please try again later."
+    def _parse_response(self, content) -> Union[BytesIO, str, None]:
+        text_response = None
+        image_data = None
 
+        for part in content.parts:
+            if part.text:
+                text_response = part.text.strip()
+            if part.inline_data and "image/" in part.inline_data.mime_type:
+                image_data = BytesIO(part.inline_data.data)
 
-def process_image_and_text(image_bytes: BytesIO, prompt: str) -> str:
-    gemini_apikey = os.environ["GEMINI_APIKEY"]
-    client = genai.Client(api_key=gemini_apikey)
+        return image_data or text_response or None
 
-    try:
-        image_part = types.Part(inline_data=types.Blob(mime_type="image/jpeg", data=image_bytes.getvalue()))
-        text_part = prompt
-
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=[image_part, text_part]
+    async def _process_image_with_prompt(self, image: BytesIO, prompt: str) -> str:
+        image_part = types.Part(inline_data=types.Blob(
+            mime_type="image/jpeg",
+            data=image.getvalue()
+        ))
+        response = self.client.models.generate_content(
+            model=self.meta.version,
+            contents=[image_part, prompt]
         )
         return response.text
-    except Exception as e:
-        print(f"Error processing image and text: {e}")
-        return f"Error: Could not process image and text (Gemini). Please try again later."
 
-
-def audio_to_text_request(audio_bytes: BytesIO) -> str:
-    gemini_apikey = os.environ["GEMINI_APIKEY"]
-    client = genai.Client(api_key=gemini_apikey)
-
-    try:
-        audio_part = types.Part(inline_data=types.Blob(mime_type="audio/mpeg", data=audio_bytes.getvalue()))
-
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
+    async def _process_audio(self, audio: BytesIO) -> str:
+        audio_part = types.Part(inline_data=types.Blob(
+            mime_type="audio/mpeg",
+            data=audio.getvalue()
+        ))
+        response = self.client.models.generate_content(
+            model=self.meta.version,
             contents=[audio_part]
         )
         return response.text
-    except Exception as e:
-        print(f"Error processing audio: {e}")
-        return f"Error: Could not process audio (Gemini). Please try again later."
 
 
-def main():
-    load_dotenv()
+@register_model(TextToTextModel, TextToImgModel, ImgToTextModel, AudioToTextModel)
+class GeminiFlash(GeminiBaseModel):
+    def __init__(self):
+        super().__init__(
+            model_version="gemini-2.0-flash-exp-image-generation",
+            description="Быстро работающая модель, поддерживающая генерацию картинок",
+            capabilities=[
+                TextToTextModel,
+                TextToImgModel,
+                ImgToTextModel,
+                AudioToTextModel
+            ]
+        )
 
 
-if __name__ == '__main__':
-    main()
+@register_model(TextToTextModel)
+class GeminiPro(GeminiBaseModel):
+    def __init__(self):
+        super().__init__(
+            model_version="gemini-1.5",
+            description="Продвинутая модель gemini, способная к более точному анализу",
+            capabilities=[TextToTextModel]
+        )
