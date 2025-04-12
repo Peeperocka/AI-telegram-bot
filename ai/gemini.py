@@ -31,7 +31,9 @@ class GeminiBaseModel(BaseAIModel):
             return await self._generate_text(prompt=input_data)
 
         if isinstance(input_data, BytesIO):
-            if prompt and ImgToTextModel in self.meta.capabilities:
+            if prompt is not None and ImgToTextModel in self.meta.capabilities:
+                if prompt == "":
+                    return "❗ Пожалуйста, добавьте текстовый запрос в подписи к изображению."
                 return await self._process_image_with_prompt(image=input_data, prompt=prompt)
             if AudioToTextModel in self.meta.capabilities:
                 return await self._process_audio(audio=input_data)

@@ -11,7 +11,7 @@ from io import BytesIO
 from states import ChatState
 from keyboards.reply_keyboards import get_settings_reply_keyboard
 from aiogram.types import BufferedInputFile
-from registry import AIRegistry, TextToTextModel, TextToImgModel, ImgToTextModel
+from registry import AIRegistry, TextToTextModel, TextToImgModel, ImgToTextModel, AudioToTextModel
 from utils.utils import split_text
 
 router = Router()
@@ -31,7 +31,7 @@ async def _handle_model_response(message: types.Message, response):
                 )
         except Exception as e:
             await message.answer(
-                f"❌ Ошибка обработки изображения: {e}",
+                f"❌ Ошибка обработки изображения, пожалуйста, попробуйте позже.",
                 reply_markup=get_settings_reply_keyboard()
             )
     elif isinstance(response, str):
@@ -85,46 +85,53 @@ async def voice_query_handler(message: types.Message, state: FSMContext) -> None
         voice = message.voice
         voice_bytes = await message.bot.download(voice)
 
-        with tempfile.NamedTemporaryFile(suffix=".ogg", delete=False) as temp_audio:
-            temp_audio.write(voice_bytes.read())
-            audio_path = temp_audio.name
+        # Создаем временную директорию для надежного управления файлами
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audio_path = os.path.join(temp_dir, "audio.ogg")
 
-        try:
+            # Записываем данные в файл и явно закрываем его
+            with open(audio_path, "wb") as f:
+                f.write(voice_bytes.read())
+
+            provider, version = model_id.split(":") if ":" in model_id else (None, None)
+            model = registry.get_model(provider, version) if provider else None
+
+            # Если модель поддерживает прямое аудио-взаимодействие
+            if model and AudioToTextModel in model.meta.capabilities:
+                response = await model.execute(voice_bytes)
+                return await _handle_model_response(message, response)
+
+            # Транскрибация
             whisper_model = registry.get_model("whisper", "whisper-large-v3")
             if not whisper_model:
                 await message.answer("⚠️ Ошибка транскрипции: модель не найдена")
                 return
 
+            # Явно закрываем файл перед использованием
             transcription = await whisper_model.execute(audio_path)
 
-            if model_id == "default":
-                await message.answer("Режим по умолчанию не настроен")
-                return
-
-            provider, version = model_id.split(":")
-            model = registry.get_model(provider, version)
-
+            # Проверка модели после транскрибации
             if not model:
                 await message.answer(f"❓️ Модель {model_id} не найдена")
                 return
 
+            # Обработка ответа модели
             if TextToTextModel in model.meta.capabilities:
                 response = await model.execute(transcription)
             elif TextToImgModel in model.meta.capabilities:
                 response = await model.execute(transcription)
             else:
-                response = f"🚫 Модель {model_id} не поддерживает текстовые запросы"
+                response = f"🚫 Модель {model_id} не поддерживает голосовые запросы"
 
             await _handle_model_response(message, response)
 
-        finally:
-            os.remove(audio_path)
-
     except Exception as e:
-        print(e)
+        logger.error(f"Voice processing error: {str(e)}")
         await message.answer(
             "🚫 Не удалось получить ответ от модели",
-            reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
+            reply_markup=get_settings_reply_keyboard(),
+            parse_mode="Markdown"
+        )
 
 
 @router.message(ChatState.waiting_query, F.photo)
@@ -159,7 +166,9 @@ async def photo_query_handler(message: types.Message, state: FSMContext) -> None
         await _handle_model_response(message, response)
 
     except Exception as e:
-        await message.answer(f"Ошибка: {str(e)}", reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
+        print(e)
+        await message.answer(f"⚠️ Ошибка, пожалуйста, попробуйте еще раз позже",
+                             reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
 
 
 @router.message(ChatState.waiting_query, F.text)
@@ -192,7 +201,8 @@ async def text_query_handler(message: types.Message, state: FSMContext) -> None:
 
     except ValueError as e:
         print(e)
-        await message.answer("🚫 Не удалось получить ответ от модели", reply_markup=get_settings_reply_keyboard(), parse_mode="Markdown")
+        await message.answer("🚫 Не удалось получить ответ от модели", reply_markup=get_settings_reply_keyboard(),
+                             parse_mode="Markdown")
 
 
 @router.message(ChatState.waiting_query, F.content_types.ANY)
