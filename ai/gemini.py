@@ -107,7 +107,7 @@ class GeminiFlash(GeminiBaseModel):
     def __init__(self):
         super().__init__(
             model_version="gemini-2.0-flash-exp-image-generation",
-            description="Быстро работающая модель, поддерживающая генерацию картинок",
+            description="быстро работающая модель, поддерживающая генерацию картинок",
             capabilities=[
                 TextToTextModel,
                 TextToImgModel,
@@ -122,7 +122,7 @@ class GeminiPro(GeminiBaseModel):
     def __init__(self):
         super().__init__(
             model_version="gemini-1.5-pro",
-            description="Продвинутая модель gemini, способная к более точному анализу",
+            description="продвинутая модель gemini, способная к более точному анализу",
             capabilities=[TextToTextModel]
         )
 
@@ -132,7 +132,7 @@ class GeminiFlashLite(GeminiBaseModel):
     def __init__(self):
         super().__init__(
             model_version="gemini-2.0-flash-lite",
-            description="Облегченная и быстрая модель Gemini, оптимизированная для скорости и эффективности.",
+            description="облегченная и быстрая модель Gemini, оптимизированная для скорости и эффективности.",
             capabilities=[TextToTextModel]
         )
 
@@ -142,7 +142,7 @@ class GeminiFlashOld(GeminiBaseModel):
     def __init__(self):
         super().__init__(
             model_version="gemini-1.5-flash",
-            description="Более ранняя версия Gemini Flash, с балансом скорости и возможностей.",
+            description="более ранняя версия Gemini Flash, с балансом скорости и возможностей.",
             capabilities=[TextToTextModel]
         )
 
@@ -152,6 +152,6 @@ class GeminiFlashOldLite(GeminiBaseModel):
     def __init__(self):
         super().__init__(
             model_version="gemini-1.5-flash-8b",
-            description="Самая легкая и старая Gemini Flash для задач с ограниченными ресурсами.",
+            description="самая легкая и старая Gemini Flash для задач с ограниченными ресурсами.",
             capabilities=[TextToTextModel]
         )

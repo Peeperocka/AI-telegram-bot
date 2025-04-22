@@ -10,7 +10,7 @@ from aiogram import Bot, Dispatcher
 async def main():
     load_dotenv()
     # Импорт всех моделей и де-факто инициализация регистра.
-    from ai import gemini, flux, llama, whisper
+    from ai import gemini, flux, llama, whisper, midjourney
     from registry import AIRegistry
 
     bot_apikey = os.environ["TELEGRAM_BOT_APIKEY"]
@@ -19,7 +19,7 @@ async def main():
 
     dp.include_routers(settings.router, chat.router)
 
-    await bot.delete_webhook(drop_pending_updates=True)
+    await bot.delete_webhook()
     await dp.start_polling(bot)
 
 

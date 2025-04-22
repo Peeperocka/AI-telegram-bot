@@ -1,8 +1,8 @@
 import io
 import os
 import tempfile
-
 import aiogram.exceptions
+
 from PIL import Image
 from aiogram import Router, types, F
 from aiogram.enums import ParseMode
@@ -30,6 +30,7 @@ async def _handle_model_response(message: types.Message, response):
                     reply_markup=get_settings_reply_keyboard()
                 )
         except Exception as e:
+            print(e)
             await message.answer(
                 f"❌ Ошибка обработки изображения, пожалуйста, попробуйте позже.",
                 reply_markup=get_settings_reply_keyboard()
@@ -68,6 +69,8 @@ async def _handle_model_response(message: types.Message, response):
         )
 
     else:
+        print(type(response))
+        print(response)
         await message.answer(
             "⚠️ Неподдерживаемый формат ответа",
             reply_markup=get_settings_reply_keyboard()
@@ -85,37 +88,30 @@ async def voice_query_handler(message: types.Message, state: FSMContext) -> None
         voice = message.voice
         voice_bytes = await message.bot.download(voice)
 
-        # Создаем временную директорию для надежного управления файлами
         with tempfile.TemporaryDirectory() as temp_dir:
             audio_path = os.path.join(temp_dir, "audio.ogg")
 
-            # Записываем данные в файл и явно закрываем его
             with open(audio_path, "wb") as f:
                 f.write(voice_bytes.read())
 
             provider, version = model_id.split(":") if ":" in model_id else (None, None)
             model = registry.get_model(provider, version) if provider else None
 
-            # Если модель поддерживает прямое аудио-взаимодействие
             if model and AudioToTextModel in model.meta.capabilities:
                 response = await model.execute(voice_bytes)
                 return await _handle_model_response(message, response)
 
-            # Транскрибация
             whisper_model = registry.get_model("whisper", "whisper-large-v3")
             if not whisper_model:
                 await message.answer("⚠️ Ошибка транскрипции: модель не найдена")
                 return
 
-            # Явно закрываем файл перед использованием
             transcription = await whisper_model.execute(audio_path)
 
-            # Проверка модели после транскрибации
             if not model:
                 await message.answer(f"❓️ Модель {model_id} не найдена")
                 return
 
-            # Обработка ответа модели
             if TextToTextModel in model.meta.capabilities:
                 response = await model.execute(transcription)
             elif TextToImgModel in model.meta.capabilities:
@@ -126,7 +122,7 @@ async def voice_query_handler(message: types.Message, state: FSMContext) -> None
             await _handle_model_response(message, response)
 
     except Exception as e:
-        logger.error(f"Voice processing error: {str(e)}")
+        print(e)
         await message.answer(
             "🚫 Не удалось получить ответ от модели",
             reply_markup=get_settings_reply_keyboard(),

@@ -3,6 +3,7 @@ from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from keyboards.inline_keyboards import get_mode_keyboard, get_models_keyboard, get_providers_keyboard
 from keyboards.reply_keyboards import get_settings_reply_keyboard
+from registry import AIRegistry
 from states import SettingsState, ChatState
 
 router = Router()
@@ -61,7 +62,8 @@ async def choose_model_handler(callback: types.CallbackQuery, state: FSMContext)
 
     await callback.message.delete()
     await callback.message.answer(
-        f"✅ Выбрана модель: {provider} {version}\n"
+        f"✅ Выбрана модель: {version}\n"
+        f"Это {AIRegistry().get_model(provider, version).meta.description}\n"
         "Теперь можете отправлять запросы!",
         reply_markup=get_settings_reply_keyboard()
     )

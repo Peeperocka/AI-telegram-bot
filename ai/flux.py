@@ -1,8 +1,7 @@
-import gradio_client.exceptions
-from gradio_client import Client
 import io
 import requests
-from PIL import Image
+import gradio_client.exceptions
+from gradio_client import Client
 from registry import TextToImgModel, ModelInfo, register_model
 
 
@@ -12,12 +11,12 @@ class FluxModel(TextToImgModel):
         self.meta = ModelInfo(
             provider="flux",
             version="FLUX.1-schnell",
-            description="Image generation model",
+            description="модель для генерации изображений по текстовому (только английский) описанию.",
             capabilities=[TextToImgModel],
             is_async=False
         )
 
-    async def execute(self, prompt: str) -> Image.Image:
+    async def execute(self, prompt: str) -> io.BytesIO:
         try:
             client = Client(
                 "black-forest-labs/FLUX.1-schnell",
@@ -40,7 +39,7 @@ class FluxModel(TextToImgModel):
     def _process_result(image_url):
         response = requests.get(image_url, stream=True)
         response.raise_for_status()
-        return Image.open(io.BytesIO(response.content))
+        return io.BytesIO(response.content)
 
     async def _use_backup(self, prompt):
         client = Client("lalashechka/FLUX_1", download_files=False)
