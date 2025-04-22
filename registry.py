@@ -81,6 +81,14 @@ class AIRegistry:
     def get_model(self, provider: str, version: str) -> Optional[BaseAIModel]:
         return self._providers.get(provider.lower(), {}).get(version)
 
+    def get_models_by_type(self, capability: Type[BaseAIModel]) -> List[BaseAIModel]:
+        models = []
+        for provider_models in self._providers.values():
+            for model in provider_models.values():
+                if capability in model.meta.capabilities:
+                    models.append(model)
+        return models
+
     def get_default_model(self, provider: str) -> Optional[BaseAIModel]:
         models = self._providers.get(provider.lower(), {})
         for model in models.values():
