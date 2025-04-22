@@ -5,20 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1d043470-6dd6-4858-98bb-f5825fe75566" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/handlers/arena_chat_handlers.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/handlers/response_handler.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/utils/transcription.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ai/flux.py" beforeDir="false" afterPath="$PROJECT_DIR$/ai/flux.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ai/gemini.py" beforeDir="false" afterPath="$PROJECT_DIR$/ai/gemini.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ai/llama.py" beforeDir="false" afterPath="$PROJECT_DIR$/ai/llama.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ai/midjourney.py" beforeDir="false" afterPath="$PROJECT_DIR$/ai/midjourney.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ai/whisper.py" beforeDir="false" afterPath="$PROJECT_DIR$/ai/whisper.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bot.py" beforeDir="false" afterPath="$PROJECT_DIR$/bot.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/handlers/chat_handlers.py" beforeDir="false" afterPath="$PROJECT_DIR$/handlers/single_chat_handlers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/handlers/settings_handlers.py" beforeDir="false" afterPath="$PROJECT_DIR$/handlers/settings_handlers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/keyboards/inline_keyboards.py" beforeDir="false" afterPath="$PROJECT_DIR$/keyboards/inline_keyboards.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/registry.py" beforeDir="false" afterPath="$PROJECT_DIR$/registry.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/states.py" beforeDir="false" afterPath="$PROJECT_DIR$/states.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/handlers/arena_chat_handlers.py" beforeDir="false" afterPath="$PROJECT_DIR$/handlers/arena_chat_handlers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/handlers/single_chat_handlers.py" beforeDir="false" afterPath="$PROJECT_DIR$/handlers/single_chat_handlers.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

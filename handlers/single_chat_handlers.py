@@ -1,14 +1,11 @@
-import os
-import tempfile
-
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 from io import BytesIO
-
 from handlers.response_handler import handle_model_response
 from states import ChatState
 from keyboards.reply_keyboards import get_settings_reply_keyboard
 from registry import AIRegistry, TextToTextModel, TextToImgModel, ImgToTextModel, AudioToTextModel
+from utils.transcription import transcribe_voice_message
 
 router = Router()
 
@@ -21,41 +18,25 @@ async def voice_query_handler(message: types.Message, state: FSMContext) -> None
     registry = AIRegistry()
 
     try:
-        voice = message.voice
-        voice_bytes = await message.bot.download(voice)
+        provider, version = model_id.split(":")
+        model = registry.get_model(provider, version)
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            audio_path = os.path.join(temp_dir, "audio.ogg")
+        if not model:
+            await message.answer(f"❓️ Модель {model_id} не найдена")
+            return
 
-            with open(audio_path, "wb") as f:
-                f.write(voice_bytes.read())
+        response = None
 
-            provider, version = model_id.split(":") if ":" in model_id else (None, None)
-            model = registry.get_model(provider, version) if provider else None
+        if AudioToTextModel in model.meta.capabilities:
+            voice = message.voice
+            voice_bytes = await message.bot.download(voice)
+            voice_data = BytesIO(voice_bytes.read())
+            response = await model.execute(voice_data)
+        elif TextToTextModel in model.meta.capabilities or TextToImgModel in model.meta.capabilities:
+            text = await transcribe_voice_message(message, registry)
+            response = await model.execute(text)
 
-            if model and AudioToTextModel in model.meta.capabilities:
-                response = await model.execute(voice_bytes)
-                return await handle_model_response(message, response)
-
-            whisper_model = registry.get_model("whisper", "whisper-large-v3")
-            if not whisper_model:
-                await message.answer("⚠️ Ошибка транскрипции: модель не найдена")
-                return
-
-            transcription = await whisper_model.execute(audio_path)
-
-            if not model:
-                await message.answer(f"❓️ Модель {model_id} не найдена")
-                return
-
-            if TextToTextModel in model.meta.capabilities:
-                response = await model.execute(transcription)
-            elif TextToImgModel in model.meta.capabilities:
-                response = await model.execute(transcription)
-            else:
-                response = f"🚫 Модель {model_id} не поддерживает голосовые запросы"
-
-            await handle_model_response(message, response)
+        await handle_model_response(message, response)
 
     except Exception as e:
         print(e)
