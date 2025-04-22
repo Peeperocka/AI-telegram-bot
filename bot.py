@@ -9,7 +9,7 @@ from aiogram import Bot, Dispatcher
 
 async def main():
     load_dotenv()
-    # Импорт всех моделей и де-факто инициализация регистра.
+    # Импорт всех моделей и инициализация регистра.
     from ai import gemini, flux, llama, whisper, midjourney
     from registry import AIRegistry
 
