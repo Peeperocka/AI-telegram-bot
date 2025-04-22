@@ -12,7 +12,7 @@ class GeminiBaseModel(BaseAIModel):
     provider = "Gemini"
     client = None
 
-    def __init__(self, model_version: str, description: str, capabilities: list):
+    def __init__(self, model_version: str, description: str, capabilities: tuple):
         if not GeminiBaseModel.client:
             GeminiBaseModel.client = genai.Client(api_key=os.environ["GEMINI_APIKEY"])
 
@@ -67,7 +67,8 @@ class GeminiBaseModel(BaseAIModel):
             print(f"Error in content generation: {str(e)}")
             return None
 
-    def _parse_response(self, content) -> Union[BytesIO, str, None]:
+    @staticmethod
+    def _parse_response(content) -> Union[BytesIO, str, None]:
         text_response = None
         image_data = None
 
@@ -102,56 +103,56 @@ class GeminiBaseModel(BaseAIModel):
         return response.text
 
 
-@register_model(TextToTextModel, TextToImgModel, ImgToTextModel, AudioToTextModel)
+@register_model()
 class GeminiFlash(GeminiBaseModel):
     def __init__(self):
         super().__init__(
             model_version="gemini-2.0-flash-exp-image-generation",
             description="быстро работающая модель, поддерживающая генерацию картинок",
-            capabilities=[
+            capabilities=(
                 TextToTextModel,
                 TextToImgModel,
                 ImgToTextModel,
                 AudioToTextModel
-            ]
+            )
         )
 
 
-@register_model(TextToTextModel)
+@register_model()
 class GeminiPro(GeminiBaseModel):
     def __init__(self):
         super().__init__(
             model_version="gemini-1.5-pro",
             description="продвинутая модель gemini, способная к более точному анализу",
-            capabilities=[TextToTextModel]
+            capabilities=(TextToTextModel,)
         )
 
 
-@register_model(TextToTextModel, ImgToTextModel, AudioToTextModel)
+@register_model()
 class GeminiFlashLite(GeminiBaseModel):
     def __init__(self):
         super().__init__(
             model_version="gemini-2.0-flash-lite",
             description="облегченная и быстрая модель Gemini, оптимизированная для скорости и эффективности.",
-            capabilities=[TextToTextModel]
+            capabilities=(TextToTextModel, ImgToTextModel, AudioToTextModel,)
         )
 
 
-@register_model(TextToTextModel, ImgToTextModel, AudioToTextModel)
+@register_model()
 class GeminiFlashOld(GeminiBaseModel):
     def __init__(self):
         super().__init__(
             model_version="gemini-1.5-flash",
             description="более ранняя версия Gemini Flash, с балансом скорости и возможностей.",
-            capabilities=[TextToTextModel]
+            capabilities=(TextToTextModel, ImgToTextModel, AudioToTextModel)
         )
 
 
-@register_model(TextToTextModel, ImgToTextModel, AudioToTextModel)
+@register_model()
 class GeminiFlashOldLite(GeminiBaseModel):
     def __init__(self):
         super().__init__(
             model_version="gemini-1.5-flash-8b",
             description="самая легкая и старая Gemini Flash для задач с ограниченными ресурсами.",
-            capabilities=[TextToTextModel]
+            capabilities=(TextToTextModel, ImgToTextModel, AudioToTextModel)
         )

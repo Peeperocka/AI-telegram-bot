@@ -18,7 +18,7 @@ class FluxGradioBaseModel(TextToImgModel):
                  model_version: str,
                  description: str,
                  default_predict_params: Dict[str, Any],
-                 capabilities: list = (TextToImgModel,)):
+                 capabilities: tuple = (TextToImgModel,)):
         self.gradio_space_id = gradio_space_id
         self.default_predict_params = default_predict_params
 
@@ -107,7 +107,7 @@ class FluxGradioBaseModel(TextToImgModel):
         raise NotImplementedError("Backup mechanism not implemented in the base class.")
 
 
-@register_model(TextToImgModel)
+@register_model()
 class FluxSchnellModel(FluxGradioBaseModel):
     def __init__(self):
         default_params = {

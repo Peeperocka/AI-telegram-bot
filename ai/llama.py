@@ -15,7 +15,7 @@ class LlamaBaseModel(BaseAIModel):
             provider=self.provider,
             version=model_version,
             description=description,
-            capabilities=[TextToTextModel],
+            capabilities=(TextToTextModel,),
             is_async=False
         )
 
@@ -33,7 +33,7 @@ class LlamaBaseModel(BaseAIModel):
             return None
 
 
-@register_model(TextToTextModel)
+@register_model()
 class Llama3_1_8B(LlamaBaseModel):
     def __init__(self):
         super().__init__(
@@ -42,7 +42,7 @@ class Llama3_1_8B(LlamaBaseModel):
         )
 
 
-@register_model(TextToTextModel)
+@register_model()
 class Llama3_1_70B_versatile(LlamaBaseModel):
     def __init__(self):
         super().__init__(
@@ -51,7 +51,7 @@ class Llama3_1_70B_versatile(LlamaBaseModel):
         )
 
 
-@register_model(TextToTextModel)
+@register_model()
 class Llama3_8B_8192(LlamaBaseModel):
     def __init__(self):
         super().__init__(
@@ -60,7 +60,7 @@ class Llama3_8B_8192(LlamaBaseModel):
         )
 
 
-@register_model(TextToTextModel)
+@register_model()
 class Llama3_70B_8192(LlamaBaseModel):
     def __init__(self):
         super().__init__(

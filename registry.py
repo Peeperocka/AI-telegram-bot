@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Type, Dict, List, Optional, ClassVar, Any
+from typing import Type, Dict, List, Optional, ClassVar, Any, Tuple
 
 
 class BaseAIModel(ABC):
@@ -33,7 +33,7 @@ class ModelInfo:
     provider: str
     version: str
     description: str
-    capabilities: List[Type[BaseAIModel]]
+    capabilities: Tuple[Type[BaseAIModel]]
     is_async: bool
     default: bool = False
     is_available_to_user: bool = True
@@ -57,7 +57,7 @@ class AudioToTextModel(BaseAIModel):
 
 class AIRegistry:
     _instance = None
-    _providers: Dict[str, Dict[str, BaseAIModel]] = defaultdict(dict)  # {provider: {version: model}}
+    _providers: Dict[str, Dict[str, BaseAIModel]] = defaultdict(dict)
 
     def __new__(cls):
         if cls._instance is None:
@@ -109,7 +109,7 @@ class AIRegistry:
         return list(self._providers.get(provider.lower(), {}).values())
 
 
-def register_model(*categories: Type[BaseAIModel]):
+def register_model():
     def decorator(cls):
         instance = cls()
         registry = AIRegistry()

@@ -1,14 +1,44 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from registry import AIRegistry
+from states import MODE_SINGLE, MODE_ARENA
 
 
 def get_mode_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
+    buttons = [
         [
-            InlineKeyboardButton(text="Обычный режим", callback_data="mode_single"),
-            InlineKeyboardButton(text="Арена (в разработке)", callback_data="mode_arena")
+            InlineKeyboardButton(text="👤 Обычный режим", callback_data=f"mode_{MODE_SINGLE}"),
+            InlineKeyboardButton(text="⚔️ Арена", callback_data=f"mode_{MODE_ARENA}")
         ]
-    ])
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def get_arena_type_keyboard() -> InlineKeyboardMarkup:
+    buttons = [
+        [
+            InlineKeyboardButton(text="✍️ Текстовые ответы", callback_data="arena_type_text"),
+        ],
+        [
+            InlineKeyboardButton(text="🖼️ Ответы изображениями", callback_data="arena_type_image"),
+        ],
+        [
+            InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_mode")
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def get_arena_vote_keyboard() -> InlineKeyboardMarkup:
+    buttons = [
+        [
+            InlineKeyboardButton(text="1️⃣ Ответ 1 лучше", callback_data="vote_1"),
+            InlineKeyboardButton(text="2️⃣ Ответ 2 лучше", callback_data="vote_2"),
+        ],
+        [
+            InlineKeyboardButton(text="👎 Ни один не нравится", callback_data="vote_none"),
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def get_providers_keyboard() -> InlineKeyboardMarkup:

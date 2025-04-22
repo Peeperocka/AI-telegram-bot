@@ -1,5 +1,6 @@
 import handlers.settings_handlers as settings
-import handlers.chat_handlers as chat
+import handlers.single_chat_handlers as single_chat
+import handlers.arena_chat_handlers as arena_chat
 import asyncio
 import os
 
@@ -17,9 +18,9 @@ async def main():
     bot = Bot(token=bot_apikey)
     dp = Dispatcher()
 
-    dp.include_routers(settings.router, chat.router)
+    dp.include_routers(settings.router, single_chat.router, arena_chat.router)
 
-    await bot.delete_webhook()
+    await bot.delete_webhook(drop_pending_updates=False)
     await dp.start_polling(bot)
 
 

@@ -7,14 +7,14 @@ from gradio_client import Client
 from registry import register_model, TextToImgModel, ModelInfo
 
 
-@register_model(TextToImgModel)
+@register_model()
 class MidjourneyModel(TextToImgModel, ABC):
     def __init__(self):
         self.meta = ModelInfo(
             provider="MidJourney",
             version="Midjourney",
             description="Модель для генерации изображений по текстовому (только английский) описанию.",
-            capabilities=[TextToImgModel],
+            capabilities=(TextToImgModel,),
             is_async=False
         )
         self.negative_prompt = (

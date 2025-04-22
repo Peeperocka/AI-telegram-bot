@@ -1,7 +1,12 @@
+import asyncio
+
 from aiogram import Router, types, F
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
-from keyboards.inline_keyboards import get_mode_keyboard, get_models_keyboard, get_providers_keyboard
+from aiogram.types import ReplyKeyboardRemove
+
+from keyboards.inline_keyboards import get_mode_keyboard, get_models_keyboard, get_providers_keyboard, \
+    get_arena_type_keyboard
 from keyboards.reply_keyboards import get_settings_reply_keyboard
 from registry import AIRegistry
 from states import SettingsState, ChatState
@@ -24,17 +29,52 @@ async def choose_mode_handler(callback: types.CallbackQuery, state: FSMContext) 
     mode = callback.data.split("_")[1]
     await state.update_data(mode=mode)
 
+    await callback.message.delete()
+
     if mode == "single":
-        await callback.message.edit_text(
-            "Вы выбрали обычный режим. Выберите провайдера:",
+        await callback.message.answer(
+            "Выбран 'Обычный режим'.\n"
+            "Выберите провайдера AI модели:",
             reply_markup=get_providers_keyboard()
         )
         await state.set_state(SettingsState.choosing_provider)
     elif mode == "arena":
-        await callback.message.edit_text(
-            "Арена режим в разработке. Используйте обычный режим.",
-            reply_markup=get_mode_keyboard()
+        await callback.message.answer(
+            "Выбран режим '✨ Арена ✨'.\n"
+            "Выберите тип арены (какой результат вы хотите сравнивать):",
+            reply_markup=get_arena_type_keyboard()
         )
+        await state.set_state(SettingsState.choosing_arena_type)
+    await callback.answer()
+
+
+@router.callback_query(SettingsState.choosing_arena_type, F.data.startswith("arena_type_"))
+async def choose_arena_type_handler(callback: types.CallbackQuery, state: FSMContext):
+    arena_type_callback_data = callback.data
+
+    arena_type_raw = arena_type_callback_data.split("_")[-1]
+
+    if arena_type_raw not in ["text", "image"]:
+        print(f"Получен некорректный arena_type колбэк: {callback.data}")
+        await callback.answer("Неизвестный тип арены.", show_alert=True)
+        return
+
+    await state.update_data(arena_type=arena_type_raw)
+
+    arena_type_name_display = {
+        "text": "✍️ Текстовые ответы",
+        "image": "🖼️ Ответы изображениями"
+    }.get(arena_type_raw, "Неизвестный тип")
+
+    await callback.message.delete()
+    await callback.message.answer(
+        f"✨ Арена типа '{arena_type_name_display}' выбрана! ✨\n\n"
+        "Теперь отправьте ваш **первый запрос** (текст или голос) для сравнения моделей.\n"
+        "Модели будут выбраны автоматически.",
+        reply_markup=get_settings_reply_keyboard()
+    )
+
+    await state.set_state(ChatState.waiting_arena_query)
     await callback.answer()
 
 
@@ -67,7 +107,7 @@ async def choose_model_handler(callback: types.CallbackQuery, state: FSMContext)
         "Теперь можете отправлять запросы!",
         reply_markup=get_settings_reply_keyboard()
     )
-    await state.set_state(ChatState.waiting_query)
+    await state.set_state(ChatState.waiting_single_query)
     await callback.answer()
 
 
@@ -81,6 +121,7 @@ async def back_to_providers_handler(callback: types.CallbackQuery, state: FSMCon
     await callback.answer()
 
 
+@router.callback_query(SettingsState.choosing_arena_type, F.data == "back_to_mode")
 @router.callback_query(SettingsState.choosing_provider, F.data == "back_to_mode")
 async def back_to_mode_handler(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
@@ -103,7 +144,7 @@ async def choose_model_handler(callback: types.CallbackQuery, state: FSMContext)
         f"Выбрана модель: {provider} {version}",
         reply_markup=get_settings_reply_keyboard()
     )
-    await state.set_state(ChatState.waiting_query)
+    await state.set_state(ChatState.waiting_single_query)
     await callback.answer()
 
 
@@ -120,8 +161,11 @@ async def back_to_mode_handler(callback: types.CallbackQuery, state: FSMContext)
 @router.message(Command(commands="settings"))
 @router.message(F.text.lower() == "/settings")
 async def settings_command_handler(message: types.Message, state: FSMContext) -> None:
+    temp_msg = await message.answer("⚙️ Перехожу в настройки...", reply_markup=ReplyKeyboardRemove())
+    await asyncio.sleep(0.5)
+    await temp_msg.delete()
     await message.answer(
         "Вы перешли в настройки. Выберите режим работы бота:",
-        reply_markup=get_mode_keyboard()
+        reply_markup=get_mode_keyboard(),
     )
     await state.set_state(SettingsState.choosing_mode)

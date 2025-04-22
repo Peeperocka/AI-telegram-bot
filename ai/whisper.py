@@ -2,14 +2,14 @@ from gradio_client import Client, handle_file
 from registry import AudioToTextModel, register_model, ModelInfo
 
 
-@register_model(AudioToTextModel)
+@register_model()
 class WhisperModel:
     def __init__(self):
         self.meta = ModelInfo(
             provider="whisper",
             version="whisper-large-v3",
             description="Audio transcription model",
-            capabilities=[AudioToTextModel],
+            capabilities=(AudioToTextModel,),
             is_async=False,
             is_available_to_user=False
         )
