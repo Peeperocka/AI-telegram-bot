@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon AI Chat</title>
+    <link rel="stylesheet" href="static/styles.css">
+    <style>
+        /* Добавляем стили для кнопки выхода */
+        .logout-header {
+            display: flex;
+            justify-content: flex-end;
+            padding: 10px;
+            background: #1a1a1a;
+        }
+
+        .logout-btn {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #ff6b81;
+        }
+    </style>
+</head>
+<body>
+    <!-- Добавляем панель с кнопкой выхода -->
+    <div class="logout-header">
+        <a href="/logout">
+            <button class="logout-btn">Выйти</button>
+        </a>
+    </div>
+
+    <div class="chat-body" id="chat"></div>
+
+    <div class="chat-footer">
+        <input id="input" placeholder="Ваше сообщение...">
+        <button id="send-btn">Отправить →</button>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

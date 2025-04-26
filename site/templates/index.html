@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Главная</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .welcome { color: #2c3e50; }
+        .alert { padding: 10px; margin: 10px 0; }
+        .alert-success { background: #dff0d8; }
+    </style>
+</head>
+<body>
+    <h1 class="welcome">Добро пожаловать!</h1>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <p>Вы на главной странице</p>
+</body>
+</html>
