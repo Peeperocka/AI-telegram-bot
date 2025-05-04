@@ -4,12 +4,14 @@ from io import BytesIO
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 
+from database import get_model_rating, update_model_rating
 from handlers.response_handler import handle_model_response
 from keyboards.inline_keyboards import get_arena_vote_keyboard
 from keyboards.reply_keyboards import get_settings_reply_keyboard
 from registry import AIRegistry, TextToTextModel, TextToImgModel, ImgToTextModel, AudioToTextModel
 from states import ChatState
 from utils.transcription import transcribe_voice_message
+from utils.utils import calculate_elo_update
 
 router = Router()
 
@@ -41,7 +43,10 @@ async def arena_text_query_handler(message: types.Message, state: FSMContext):
     print(models)
     for index, model in enumerate(models):
         try:
-            response = await model.execute(message.text)
+            if arena_type == "text" and TextToImgModel in model.meta.capabilities:
+                response = await model.execute(message.text, enforce_text_response=True)
+            else:
+                response = await model.execute(message.text)
         except Exception as e:
             print(e)
             response = None
@@ -101,7 +106,6 @@ async def arena_voice_query_handler(message: types.Message, state: FSMContext):
     data = await state.get_data()
     print(f"ARENA Handler (Voice): Mode is {data.get('mode')}")
     await message.answer("Обработка вашего голоса в режиме арены...")
-    # TODO: Логика обработки голоса для арены
     registry = AIRegistry()
     arena_type = data.get('arena_type')
 
@@ -148,21 +152,90 @@ async def arena_voice_query_handler(message: types.Message, state: FSMContext):
 @router.callback_query(F.data.startswith("vote_"), ChatState.waiting_arena_vote)
 async def arena_vote_handler(callback: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    models = data.get('arena_current_pair')
-    print(f"ARENA Vote Handler: Got vote {callback.data} for {models}")
+    model_objects = data.get('arena_current_pair')
+
+    if not model_objects or len(model_objects) != 2:
+        print("Error: Invalid 'arena_current_pair' data in state.")
+        await callback.answer("Произошла ошибка при обработке голоса. Попробуйте снова.", show_alert=True)
+        await state.set_state(ChatState.waiting_arena_query)
+        try:
+            await callback.message.edit_reply_markup(reply_markup=None)
+        except Exception as e:
+            print(f"Error editing reply markup: {e}")
+            pass
+        return
+
+    try:
+        model_id_1 = f"{model_objects[0].meta.provider.lower()}:{model_objects[0].meta.version}"
+        model_id_2 = f"{model_objects[1].meta.provider.lower()}:{model_objects[1].meta.version}"
+        print(f"ARENA Vote Handler: Got vote {callback.data} for pair IDs: [{model_id_1}, {model_id_2}]")
+    except AttributeError as e:
+        print(f"Error: Could not extract model ID from state objects: {e}. Objects: {model_objects}")
+        await callback.answer("Произошла ошибка данных моделей. Попробуйте снова.", show_alert=True)
+        await state.set_state(ChatState.waiting_arena_query)
+        try:
+            await callback.message.edit_reply_markup(reply_markup=None)
+        except Exception as e:
+            print(f"Error editing reply markup: {e}")
+            pass
+        return
 
     vote = callback.data.split("_")[1]
-    if vote == "1":
-        print(f"Voted for {models[0]}")
-    elif vote == "2":
-        print(f"Voted for {models[1]}")
-    else:
-        print(f"voted against everyone")
+    winner_model_id = None
+    is_tie = False
 
-    # TODO: обновить рейтинг, ну и че-нить там еще, не знаю
+    if vote == "1":
+        winner_model_id = model_id_1
+        print(f"Voted for model 1 ID: {winner_model_id}")
+    elif vote == "2":
+        winner_model_id = model_id_2
+        print(f"Voted for model 2 ID: {winner_model_id}")
+    elif vote == "tie":
+        is_tie = True
+        print(f"Voted TIE for {model_id_1} vs {model_id_2}")
+    else:
+        print(f"Unexpected vote value: {vote}")
+        await callback.answer("Некорректный голос, попробуйте еще раз", show_alert=True)
+        return
+
+    try:
+        rating1 = get_model_rating(model_id_1)
+        rating2 = get_model_rating(model_id_2)
+
+        if rating1 is not None and rating2 is not None:
+            if is_tie:
+                new_rating1, new_rating2 = calculate_elo_update(rating1, rating2, score_a=0.5)
+            elif winner_model_id:
+                if winner_model_id == model_id_1:
+                    new_rating1, new_rating2 = calculate_elo_update(rating1, rating2, score_a=1.0)
+                else:
+                    new_rating2, new_rating1 = calculate_elo_update(rating2, rating1, score_a=1.0)
+            else:
+                print("Error: Vote processed but no winner/loser/tie identified for rating calculation.")
+                raise ValueError("Rating calculation logic error")
+
+            update_model_rating(model_id_1, new_rating1)
+            update_model_rating(model_id_2, new_rating2)
+            print(f"Ratings updated: {model_id_1}={new_rating1}, {model_id_2}={new_rating2}")
+
+        else:
+            print(
+                f"Error: Could not retrieve ratings for one or both models: {model_id_1} ({rating1}), {model_id_2} ({rating2})")
+
+    except Exception as e:
+        print(f"Error during rating update process: {e}")
+
     await callback.answer("Ваш голос принят!")
+
     await state.update_data(arena_current_pair=None)
     await state.set_state(ChatState.waiting_arena_query)
+
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except Exception as e:
+        print(f"Could not edit message reply markup: {e}")
+
     await callback.message.answer(
         "Ожидаю ваш следующий запрос для арены.",
-        reply_markup=get_settings_reply_keyboard())
+        reply_markup=get_settings_reply_keyboard()
+    )

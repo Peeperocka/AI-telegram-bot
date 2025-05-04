@@ -35,7 +35,7 @@ def get_arena_vote_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="2️⃣ Ответ 2 лучше", callback_data="vote_2"),
         ],
         [
-            InlineKeyboardButton(text="👎 Ни один не нравится", callback_data="vote_none"),
+            InlineKeyboardButton(text="👎 Ни один не нравится", callback_data="vote_tie"),
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)

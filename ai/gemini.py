@@ -24,9 +24,10 @@ class GeminiBaseModel(BaseAIModel):
             is_async=False
         )
 
-    async def execute(self, input_data: Union[str, BytesIO], prompt: str = None) -> Union[str, BytesIO, None]:
+    async def execute(self, input_data: Union[str, BytesIO], prompt: str = None, enforce_text_response: bool = False) -> \
+            Union[str, BytesIO, None]:
         if isinstance(input_data, str):
-            if TextToImgModel in self.meta.capabilities:
+            if TextToImgModel in self.meta.capabilities and not enforce_text_response:
                 return await self._generate_content(prompt=input_data, modalities=['Image', 'Text'])
             return await self._generate_text(prompt=input_data)
 

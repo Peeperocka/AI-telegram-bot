@@ -1,10 +1,10 @@
 import asyncio
+import database
 
 from aiogram import Router, types, F
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import ReplyKeyboardRemove
-
 from keyboards.inline_keyboards import get_mode_keyboard, get_models_keyboard, get_providers_keyboard, \
     get_arena_type_keyboard
 from keyboards.reply_keyboards import get_settings_reply_keyboard
@@ -16,8 +16,20 @@ router = Router()
 
 @router.message(CommandStart())
 async def command_start_handler(message: types.Message, state: FSMContext) -> None:
+    user_id = message.from_user.id
+    user_name = message.from_user.full_name
+
+    print(f"User {user_name} (ID: {user_id}) started the bot.")
+
+    try:
+        database.register_or_check_user(user_id)
+        print(f"User {user_id} checked/registered in DB.")
+
+    except Exception as e:
+        print(f"Error registering/checking user {user_id} in DB: {e}")
+
     await message.answer(
-        "Привет! Добро пожаловать в бот.\n\n"
+        f"Привет, {user_name}! Добро пожаловать.\n\n"
         "Пожалуйста, выберите режим работы бота:",
         reply_markup=get_mode_keyboard(),
     )
@@ -63,7 +75,7 @@ async def choose_arena_type_handler(callback: types.CallbackQuery, state: FSMCon
 
     arena_type_name_display = {
         "text": "✍️ Текстовые ответы",
-        "image": "🖼️ Ответы изображениями"
+        "image": "🖼️ Ответы изображениями (Запросы на английском)"
     }.get(arena_type_raw, "Неизвестный тип")
 
     await callback.message.delete()
