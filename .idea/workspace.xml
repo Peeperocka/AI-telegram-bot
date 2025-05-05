@@ -5,14 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1d043470-6dd6-4858-98bb-f5825fe75566" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/database.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/initialize_db.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ai/gemini.py" beforeDir="false" afterPath="$PROJECT_DIR$/ai/gemini.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/database.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/handlers/arena_chat_handlers.py" beforeDir="false" afterPath="$PROJECT_DIR$/handlers/arena_chat_handlers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/handlers/settings_handlers.py" beforeDir="false" afterPath="$PROJECT_DIR$/handlers/settings_handlers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/keyboards/inline_keyboards.py" beforeDir="false" afterPath="$PROJECT_DIR$/keyboards/inline_keyboards.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/handlers/response_handler.py" beforeDir="false" afterPath="$PROJECT_DIR$/handlers/response_handler.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/handlers/single_chat_handlers.py" beforeDir="false" afterPath="$PROJECT_DIR$/handlers/single_chat_handlers.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

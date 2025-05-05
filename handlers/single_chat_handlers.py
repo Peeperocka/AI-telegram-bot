@@ -1,6 +1,8 @@
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 from io import BytesIO
+
+from database import can_afford_cost, get_user_quota_info, DEFAULT_DAILY_QUOTA, quota_check
 from handlers.response_handler import handle_model_response
 from states import ChatState
 from keyboards.reply_keyboards import get_settings_reply_keyboard
@@ -11,6 +13,7 @@ router = Router()
 
 
 @router.message(ChatState.waiting_single_query, F.voice)
+@quota_check(1)
 async def voice_query_handler(message: types.Message, state: FSMContext) -> None:
     await message.answer("⏳")
     user_data = await state.get_data()
@@ -48,6 +51,7 @@ async def voice_query_handler(message: types.Message, state: FSMContext) -> None
 
 
 @router.message(ChatState.waiting_single_query, F.photo)
+@quota_check(1)
 async def photo_query_handler(message: types.Message, state: FSMContext) -> None:
     await message.answer("⏳")
     user_data = await state.get_data()
@@ -81,6 +85,7 @@ async def photo_query_handler(message: types.Message, state: FSMContext) -> None
 
 
 @router.message(ChatState.waiting_single_query, F.text)
+@quota_check(1)
 async def text_query_handler(message: types.Message, state: FSMContext) -> None:
     await message.answer("⏳")
     user_data = await state.get_data()

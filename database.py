@@ -1,5 +1,9 @@
 import sqlite3
 import os
+from functools import wraps
+
+from aiogram import types
+from aiogram.exceptions import TelegramAPIError
 from dotenv import load_dotenv
 from typing import Optional, List, Tuple, Dict
 
@@ -207,3 +211,50 @@ def get_user_quota_info(user_id: int) -> Optional[Dict[str, int]]:
     finally:
         conn.close()
     return info
+
+
+def quota_check(cost: int):
+    if not isinstance(cost, int) or cost < 0:
+        raise ValueError("Стоимость квоты должна быть неотрицательным целым числом.")
+
+    def decorator(handler):
+        @wraps(handler)
+        async def wrapper(update: types.Update, *args, **kwargs):
+            user = None
+            reply_method = None
+
+            if isinstance(update, types.Message):
+                user = update.from_user
+                reply_method = update.reply
+            elif isinstance(update, types.CallbackQuery):
+                user = update.from_user
+                if update.message:
+                    reply_method = update.message.reply
+                else:
+                    reply_method = update.answer
+
+            if not user or not reply_method:
+                print(
+                    f"Quota check decorator: Can't get user or reply method from update type {type(update)}. Skipping check.")
+                return await handler(update, *args, **kwargs)
+
+            user_id = user.id
+
+            if not can_afford_cost(user_id, cost):
+                print(f"Проверка квоты не пройдена для пользователя {user_id}. Требуется: {cost}")
+                quota_info = get_user_quota_info(user_id)
+                limit = quota_info.get('limit', DEFAULT_DAILY_QUOTA) if quota_info else DEFAULT_DAILY_QUOTA
+                reply_text = f"❌ Ваш дневной лимит запросов ({limit}) исчерпан. Попробуйте завтра."
+
+                try:
+                    await reply_method(reply_text)
+                except TelegramAPIError as e:
+                    print(f"Ошибка отправки сообщения об исчерпании лимита пользователю {user_id}: {e}")
+                return
+
+            print(f"Проверка квоты пройдена для пользователя {user_id}. Требуется: {cost}. Продолжаем.")
+            return await handler(update, *args, **kwargs)
+
+        return wrapper
+
+    return decorator

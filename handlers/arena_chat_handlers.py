@@ -4,7 +4,8 @@ from io import BytesIO
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 
-from database import get_model_rating, update_model_rating
+from database import get_model_rating, update_model_rating, can_afford_cost, DEFAULT_DAILY_QUOTA, get_user_quota_info, \
+    consume_quota, quota_check
 from handlers.response_handler import handle_model_response
 from keyboards.inline_keyboards import get_arena_vote_keyboard
 from keyboards.reply_keyboards import get_settings_reply_keyboard
@@ -17,10 +18,11 @@ router = Router()
 
 
 @router.message(F.text, ChatState.waiting_arena_query)
+@quota_check(4)
 async def arena_text_query_handler(message: types.Message, state: FSMContext):
     data = await state.get_data()
     print(f"ARENA Handler (Text): Mode is {data.get('mode')}")
-    await message.answer("Обработка вашего текстового запроса в режиме арены...")
+    placeholder_msg = await message.answer("Обработка вашего текстового запроса в режиме арены...")
 
     registry = AIRegistry()
     arena_type = data.get('arena_type')
@@ -28,6 +30,7 @@ async def arena_text_query_handler(message: types.Message, state: FSMContext):
         await message.answer("Тип арены не выбран. Пожалуйста, выберите тип арены.",
                              reply_markup=get_settings_reply_keyboard())
         return
+
     models = None
     match arena_type:
         case "text":
@@ -40,7 +43,10 @@ async def arena_text_query_handler(message: types.Message, state: FSMContext):
         return
 
     models = random.sample(models, 2)
-    print(models)
+    print(
+        f"ARENA Handler (Text): Chosen models: {', '.join(f'{model.meta.provider}:{model.meta.version}' for model in models)}")
+    quota_to_consume_after_models_work = 0
+    await placeholder_msg.delete()
     for index, model in enumerate(models):
         try:
             if arena_type == "text" and TextToImgModel in model.meta.capabilities:
@@ -51,7 +57,10 @@ async def arena_text_query_handler(message: types.Message, state: FSMContext):
             print(e)
             response = None
         await message.answer(f"Ответ {index + 1} модели:")
-        await handle_model_response(message, response)
+        if await handle_model_response(message, response):
+            quota_to_consume_after_models_work += 2 if arena_type == "image" else 1
+
+    consume_quota(message.from_user.id, quota_to_consume_after_models_work)
 
     await state.update_data(arena_current_pair=(models[0], models[1]))
     await state.set_state(ChatState.waiting_arena_vote)
@@ -59,10 +68,11 @@ async def arena_text_query_handler(message: types.Message, state: FSMContext):
 
 
 @router.message(F.photo, ChatState.waiting_arena_query)
+@quota_check(2)
 async def arena_photo_query_handler(message: types.Message, state: FSMContext):
     data = await state.get_data()
     print(f"ARENA Handler (Photo): Mode is {data.get('mode')}")
-    await message.answer("Обработка вашего фото в режиме арены...")
+    placeholder_msg = await message.answer("Обработка вашего фото в режиме арены...")
     registry = AIRegistry()
     arena_type = data.get('arena_type')
     if not arena_type:
@@ -79,14 +89,18 @@ async def arena_photo_query_handler(message: types.Message, state: FSMContext):
         await message.answer("Нет моделей для выбранного типа арены.",
                              reply_markup=get_settings_reply_keyboard())
         return
+
     models = random.sample(models, 2)
-    print(models)
+    print(
+        f"ARENA Handler (Photo): Chosen models: {', '.join(f'{model.meta.provider}:{model.meta.version}' for model in models)}")
+    quota_to_consume_after_models_work = 0
 
     photo = message.photo[-1]
     photo_bytes = await message.bot.download(photo)
     image_data = BytesIO(photo_bytes.read())
     prompt = message.caption or ""
 
+    await placeholder_msg.delete()
     for index, model in enumerate(models):
         try:
             response = await model.execute(image_data, prompt)
@@ -94,7 +108,11 @@ async def arena_photo_query_handler(message: types.Message, state: FSMContext):
             print(e)
             response = None
         await message.answer(f"Ответ {index + 1} модели:")
-        await handle_model_response(message, response)
+        if await handle_model_response(message, response):
+            print(f"ARENA Handler (Photo): Model {model.meta.provider}:{model.meta.version} returned a response")
+            quota_to_consume_after_models_work += 1
+
+    consume_quota(message.from_user.id, quota_to_consume_after_models_work)
 
     await state.update_data(arena_current_pair=(models[0], models[1]))
     await state.set_state(ChatState.waiting_arena_vote)
@@ -102,10 +120,11 @@ async def arena_photo_query_handler(message: types.Message, state: FSMContext):
 
 
 @router.message(F.voice, ChatState.waiting_arena_query)
+@quota_check(2)
 async def arena_voice_query_handler(message: types.Message, state: FSMContext):
     data = await state.get_data()
     print(f"ARENA Handler (Voice): Mode is {data.get('mode')}")
-    await message.answer("Обработка вашего голоса в режиме арены...")
+    placeholder_msg = await message.answer("Обработка вашего голоса в режиме арены...")
     registry = AIRegistry()
     arena_type = data.get('arena_type')
 
@@ -127,8 +146,11 @@ async def arena_voice_query_handler(message: types.Message, state: FSMContext):
         return
 
     models = random.sample(models, 2)
-    print(models)
+    print(
+        f"ARENA Handler (Voice): Chosen models: {', '.join(f'{model.meta.provider}:{model.meta.version}' for model in models)}")
+    quota_to_consume_after_models_work = 0
 
+    await placeholder_msg.delete()
     for index, model in enumerate(models):
         try:
             if AudioToTextModel in model.meta.capabilities:
@@ -143,7 +165,10 @@ async def arena_voice_query_handler(message: types.Message, state: FSMContext):
             print(e)
             response = None
         await message.answer(f"Ответ {index + 1} модели:")
-        await handle_model_response(message, response)
+        if await handle_model_response(message, response):
+            quota_to_consume_after_models_work += 1
+
+    consume_quota(message.from_user.id, quota_to_consume_after_models_work)
     await state.update_data(arena_current_pair=(models[0], models[1]))
     await state.set_state(ChatState.waiting_arena_vote)
     await message.answer("Выберите лучший ответ:", reply_markup=get_arena_vote_keyboard())
