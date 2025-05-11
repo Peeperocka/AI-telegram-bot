@@ -62,7 +62,7 @@ async def handle_model_response(message: types.Message, response) -> bool:
                     print(f"Markdown send failed: {e_md}. Retrying without Markdown.")
                     try:
                         await message.answer(
-                            text=part,
+                            text=part.replace('*', ''),
                             reply_markup=reply_markup,
                             disable_web_page_preview=True
                         )

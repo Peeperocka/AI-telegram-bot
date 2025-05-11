@@ -13,7 +13,7 @@ class MidjourneyModel(TextToImgModel, ABC):
         self.meta = ModelInfo(
             provider="MidJourney",
             version="Midjourney",
-            description="Модель для генерации изображений по текстовому (только английский) описанию.",
+            description="модель для генерации изображений по текстовому (только английский) описанию.",
             capabilities=(TextToImgModel,),
             is_async=False
         )

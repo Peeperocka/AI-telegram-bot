@@ -46,7 +46,6 @@ async def arena_text_query_handler(message: types.Message, state: FSMContext):
     print(
         f"ARENA Handler (Text): Chosen models: {', '.join(f'{model.meta.provider}:{model.meta.version}' for model in models)}")
     quota_to_consume_after_models_work = 0
-    await placeholder_msg.delete()
     for index, model in enumerate(models):
         try:
             if arena_type == "text" and TextToImgModel in model.meta.capabilities:
@@ -59,6 +58,8 @@ async def arena_text_query_handler(message: types.Message, state: FSMContext):
         await message.answer(f"Ответ {index + 1} модели:")
         if await handle_model_response(message, response):
             quota_to_consume_after_models_work += 2 if arena_type == "image" else 1
+
+    await placeholder_msg.delete()
 
     consume_quota(message.from_user.id, quota_to_consume_after_models_work)
 
@@ -100,7 +101,6 @@ async def arena_photo_query_handler(message: types.Message, state: FSMContext):
     image_data = BytesIO(photo_bytes.read())
     prompt = message.caption or ""
 
-    await placeholder_msg.delete()
     for index, model in enumerate(models):
         try:
             response = await model.execute(image_data, prompt)
@@ -111,6 +111,7 @@ async def arena_photo_query_handler(message: types.Message, state: FSMContext):
         if await handle_model_response(message, response):
             print(f"ARENA Handler (Photo): Model {model.meta.provider}:{model.meta.version} returned a response")
             quota_to_consume_after_models_work += 1
+    await placeholder_msg.delete()
 
     consume_quota(message.from_user.id, quota_to_consume_after_models_work)
 
@@ -150,7 +151,6 @@ async def arena_voice_query_handler(message: types.Message, state: FSMContext):
         f"ARENA Handler (Voice): Chosen models: {', '.join(f'{model.meta.provider}:{model.meta.version}' for model in models)}")
     quota_to_consume_after_models_work = 0
 
-    await placeholder_msg.delete()
     for index, model in enumerate(models):
         try:
             if AudioToTextModel in model.meta.capabilities:
@@ -167,6 +167,8 @@ async def arena_voice_query_handler(message: types.Message, state: FSMContext):
         await message.answer(f"Ответ {index + 1} модели:")
         if await handle_model_response(message, response):
             quota_to_consume_after_models_work += 1
+
+    await placeholder_msg.delete()
 
     consume_quota(message.from_user.id, quota_to_consume_after_models_work)
     await state.update_data(arena_current_pair=(models[0], models[1]))

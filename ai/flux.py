@@ -31,7 +31,6 @@ class FluxGradioBaseModel(TextToImgModel):
         )
 
     async def execute(self, prompt: str) -> BytesIO | None:
-        # заготовка под логгер, не трогай
         print(f"Executing model: {self.meta.version} via Gradio space: {self.gradio_space_id}")
         try:
             client = Client(
