@@ -22,7 +22,7 @@ router = Router()
 async def arena_text_query_handler(message: types.Message, state: FSMContext):
     data = await state.get_data()
     print(f"ARENA Handler (Text): Mode is {data.get('mode')}")
-    placeholder_msg = await message.answer("Обработка вашего текстового запроса в режиме арены...")
+    await message.answer("Обработка вашего текстового запроса в режиме арены...")
 
     registry = AIRegistry()
     arena_type = data.get('arena_type')
@@ -59,8 +59,6 @@ async def arena_text_query_handler(message: types.Message, state: FSMContext):
         if await handle_model_response(message, response):
             quota_to_consume_after_models_work += 2 if arena_type == "image" else 1
 
-    await placeholder_msg.delete()
-
     consume_quota(message.from_user.id, quota_to_consume_after_models_work)
 
     await state.update_data(arena_current_pair=(models[0], models[1]))
@@ -73,7 +71,7 @@ async def arena_text_query_handler(message: types.Message, state: FSMContext):
 async def arena_photo_query_handler(message: types.Message, state: FSMContext):
     data = await state.get_data()
     print(f"ARENA Handler (Photo): Mode is {data.get('mode')}")
-    placeholder_msg = await message.answer("Обработка вашего фото в режиме арены...")
+    await message.answer("Обработка вашего фото в режиме арены...")
     registry = AIRegistry()
     arena_type = data.get('arena_type')
     if not arena_type:
@@ -111,7 +109,6 @@ async def arena_photo_query_handler(message: types.Message, state: FSMContext):
         if await handle_model_response(message, response):
             print(f"ARENA Handler (Photo): Model {model.meta.provider}:{model.meta.version} returned a response")
             quota_to_consume_after_models_work += 1
-    await placeholder_msg.delete()
 
     consume_quota(message.from_user.id, quota_to_consume_after_models_work)
 
@@ -125,7 +122,7 @@ async def arena_photo_query_handler(message: types.Message, state: FSMContext):
 async def arena_voice_query_handler(message: types.Message, state: FSMContext):
     data = await state.get_data()
     print(f"ARENA Handler (Voice): Mode is {data.get('mode')}")
-    placeholder_msg = await message.answer("Обработка вашего голоса в режиме арены...")
+    await message.answer("Обработка вашего голоса в режиме арены...")
     registry = AIRegistry()
     arena_type = data.get('arena_type')
 
@@ -167,8 +164,6 @@ async def arena_voice_query_handler(message: types.Message, state: FSMContext):
         await message.answer(f"Ответ {index + 1} модели:")
         if await handle_model_response(message, response):
             quota_to_consume_after_models_work += 1
-
-    await placeholder_msg.delete()
 
     consume_quota(message.from_user.id, quota_to_consume_after_models_work)
     await state.update_data(arena_current_pair=(models[0], models[1]))

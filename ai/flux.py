@@ -120,7 +120,7 @@ class FluxSchnellModel(FluxGradioBaseModel):
         super().__init__(
             gradio_space_id="black-forest-labs/FLUX.1-schnell",
             model_version="FLUX.1-schnell",
-            description="Быстрая модель FLUX.1-schnell",
+            description="быстрая модель FLUX.1-schnell для генерации картинок",
             default_predict_params=default_params
         )
         self.backup_gradio_space_id = "lalashechka/FLUX_1"
