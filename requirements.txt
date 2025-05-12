@@ -1,0 +1,8 @@
+requests~=2.32.3
+gradio_client~=1.8.0
+groq~=0.22.0
+google~=3.0.0
+protobuf~=6.30.2
+aiogram~=3.19.0
+python-dotenv~=1.0.1
+pillow~=11.0.0
